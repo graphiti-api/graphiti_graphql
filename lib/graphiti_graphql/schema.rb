@@ -309,13 +309,17 @@ module GraphitiGraphQL
       if top_level_single
         field.argument(:id, String, required: true)
       else
-        sort_type = generate_sort_type(resource)
-        field.argument :sort, [sort_type], required: false
+        unless resource.sorts.empty?
+          sort_type = generate_sort_type(resource)
+          field.argument :sort, [sort_type], required: false
+        end
         field.argument :page, PageType, required: false
 
-        filter_type = generate_filter_type(field, resource)
-        required = resource.filters.any? { |name, config| !!config[:required] }
-        field.argument :filter, filter_type, required: required
+        unless resource.filters.empty?
+          filter_type = generate_filter_type(field, resource)
+          required = resource.filters.any? { |name, config| !!config[:required] }
+          field.argument :filter, filter_type, required: required
+        end
       end
     end
 

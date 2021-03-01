@@ -122,6 +122,60 @@ RSpec.describe GraphitiGraphQL::Schema do
         })
       end
 
+      context "when there are no sorts" do
+        let(:resource) do
+          Class.new(PORO::ApplicationResource) do
+            def self.name;"PORO::EmployeeResource";end
+            self.type = :employees
+            self.graphql_entrypoint = :employees
+            attribute :id, :string, only: [:readable]
+            attribute :name, :string, only: [:readable]
+          end
+        end
+
+        before do
+          schema!([resource])
+        end
+
+        it "does not generate sort classes" do
+          schema = Graphiti.graphql_schema.schema
+          expect(schema.types.keys.grep(/sort/i)).to be_empty
+        end
+
+        it "does not accept the sort argument" do
+          schema = Graphiti.graphql_schema.schema
+          expect(schema.query.fields["employees"].arguments.keys)
+            .to_not include("sort")
+        end
+      end
+
+      context "when there are no filters" do
+        let(:resource) do
+          Class.new(PORO::ApplicationResource) do
+            def self.name;"PORO::EmployeeResource";end
+            self.type = :employees
+            self.graphql_entrypoint = :employees
+            attribute :id, :string, only: [:readable]
+            attribute :name, :string, only: [:readable]
+          end
+        end
+
+        before do
+          schema!([resource])
+        end
+
+        it "does not generate filter classes" do
+          schema = Graphiti.graphql_schema.schema
+          expect(schema.types.keys.grep(/filter/i)).to be_empty
+        end
+
+        it "does not accept the filter argument" do
+          schema = Graphiti.graphql_schema.schema
+          expect(schema.query.fields["employees"].arguments.keys)
+            .to_not include("filter")
+        end
+      end
+
       context "when .define_context set" do
         before do
           GraphitiGraphQL.define_context do |ctx|
