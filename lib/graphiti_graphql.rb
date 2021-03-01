@@ -1,5 +1,7 @@
 require "active_support/core_ext/object/json"
 
+require "graphql"
+require "graphiti"
 require "graphiti_graphql/version"
 require "graphiti_graphql/graphiti_schema/wrapper"
 require "graphiti_graphql/graphiti_schema/sideload"

@@ -3,6 +3,7 @@ module GraphitiGraphQL
     GQL_TYPE_MAP = {
       integer_id: String,
       string: String,
+      uuid: String,
       integer: Integer,
       float: Float,
       boolean: GraphQL::Schema::Member::GraphQLTypeNames::Boolean,
