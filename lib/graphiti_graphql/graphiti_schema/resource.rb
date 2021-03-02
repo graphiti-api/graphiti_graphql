@@ -59,14 +59,6 @@ module GraphitiGraphQL
         !!config[:remote]
       end
 
-      def fetch_remote_schema!
-        parts = remote_url.split("/")
-        parts.pop
-        url = "#{parts.join("/")}/vandal/schema.json"
-        response = faraday.get(url)
-        JSON.parse(response.body).deep_symbolize_keys
-      end
-
       def name
         config[:name]
       end
@@ -101,16 +93,6 @@ module GraphitiGraphQL
 
       def all_attributes
         attributes.merge(extra_attributes)
-      end
-
-      private
-
-      def faraday
-        if defined?(Faraday)
-          Faraday
-        else
-          raise "Faraday not defined. Please require the 'faraday' gem to use remote resources"
-        end
       end
     end
   end

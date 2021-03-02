@@ -61,9 +61,6 @@ module GraphitiGraphQL
 
       graphiti_schema = GraphitiGraphQL::GraphitiSchema::Wrapper
         .new(Graphiti::Schema.generate)
-      # TODO: if we avoid this on federation, or remove altogether
-      # Make sure we don't blow up
-      # graphiti_schema.merge_remotes!
 
       entries = entrypoint_resources || entrypoints
       instance.apply_query(graphiti_schema, schema, entries)
