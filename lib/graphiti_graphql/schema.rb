@@ -127,7 +127,7 @@ module GraphitiGraphQL
 
         unless pre_registered
           # NB must be registered before processing rels
-          type_registry[klass_name] = { type: external_klass }
+          type_registry[klass_name] = {type: external_klass}
         end
 
         # TODO: only do it if field not already defined
@@ -165,7 +165,7 @@ module GraphitiGraphQL
         selections = lookahead.selections.map(&:name)
         selections << relationship.foreign_key
         selections << :_type # polymorphism
-        params[:fields] = { local_resource.type => selections.join(",") }
+        params[:fields] = {local_resource.type => selections.join(",")}
 
         if (sort = Util.parse_sort(params[:sort]))
           params[:sort] = sort

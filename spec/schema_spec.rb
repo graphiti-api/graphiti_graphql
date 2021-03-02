@@ -26,12 +26,12 @@ RSpec.describe GraphitiGraphQL::Schema do
       end
 
       let(:query_type) do
-        klass = Class.new(GraphQL::Schema::Object) do
+        klass = Class.new(GraphQL::Schema::Object) {
           graphql_name "MyQueryType"
           def things
             [OpenStruct.new(gql_specific: "works!")]
           end
-        end
+        }
         klass.field :things, [custom_type], null: false
         klass
       end
@@ -125,7 +125,9 @@ RSpec.describe GraphitiGraphQL::Schema do
       context "when there are no sorts" do
         let(:resource) do
           Class.new(PORO::ApplicationResource) do
-            def self.name;"PORO::EmployeeResource";end
+            def self.name
+              "PORO::EmployeeResource"
+            end
             self.type = :employees
             self.graphql_entrypoint = :employees
             attribute :id, :string, only: [:readable]
@@ -152,7 +154,9 @@ RSpec.describe GraphitiGraphQL::Schema do
       context "when there are no filters" do
         let(:resource) do
           Class.new(PORO::ApplicationResource) do
-            def self.name;"PORO::EmployeeResource";end
+            def self.name
+              "PORO::EmployeeResource"
+            end
             self.type = :employees
             self.graphql_entrypoint = :employees
             attribute :id, :string, only: [:readable]

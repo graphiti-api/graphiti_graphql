@@ -56,7 +56,7 @@ RSpec.describe GraphitiGraphQL::Federation do
     it "adds the key directive to all resource types" do
       type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
       expect(type.to_graphql.metadata[:federation_directives]).to eq([
-        { name: "key", arguments: [{name: "fields", values: "id"}] }
+        {name: "key", arguments: [{name: "fields", values: "id"}]}
       ])
     end
   end
@@ -68,8 +68,8 @@ RSpec.describe GraphitiGraphQL::Federation do
       type = GraphitiGraphQL.schemas.graphql.types["OtherPosition"]
       expect(type.graphql_name).to eq("OtherPosition")
       expect(type.to_graphql.metadata[:federation_directives]).to eq([
-        { name: "key", arguments: [{name: "fields", values: "id"}] },
-        { name: "extends", arguments: nil }
+        {name: "key", arguments: [{name: "fields", values: "id"}]},
+        {name: "extends", arguments: nil}
       ])
     end
 
@@ -236,8 +236,8 @@ RSpec.describe GraphitiGraphQL::Federation do
               original = Graphiti.context[:graphql]
               Graphiti.context[:graphql] = true
               record = resource.all({
-                fields: { employees: "id" },
-                filter: { other_pos_id: 5 }
+                fields: {employees: "id"},
+                filter: {other_pos_id: 5}
               }).as_json[:data][0]
               expect(record[:id]).to eq(employee.id.to_s)
             ensure
@@ -353,11 +353,11 @@ RSpec.describe GraphitiGraphQL::Federation do
           resource.federated_type("OtherPosition").has_many :employees
           schema!([resource])
           instance1 = type_instance "OtherPosition",
-            { id: employee1.other_position_id.to_s }
+            {id: employee1.other_position_id.to_s}
           instance2 = type_instance "OtherPosition",
-            { id: employee2.other_position_id.to_s }
+            {id: employee2.other_position_id.to_s}
           expect(resource).to receive(:all).with(hash_including({
-            page: { size: 999 }
+            page: {size: 999}
           })).and_call_original
           execute(instance1, instance2)
         end
@@ -396,9 +396,9 @@ RSpec.describe GraphitiGraphQL::Federation do
                 resource.federated_type("OtherPosition").has_many :employees
                 schema!([resource])
                 instance1 = type_instance "OtherPosition",
-                  { id: employee1.other_position_id.to_s }
+                  {id: employee1.other_position_id.to_s}
                 instance2 = type_instance "OtherPosition",
-                  { id: employee2.other_position_id.to_s }
+                  {id: employee2.other_position_id.to_s}
                 expect {
                   execute(instance1, instance2)
                 }.to raise_error(Graphiti::Errors::UnreadableAttribute, /salary/)
@@ -412,9 +412,9 @@ RSpec.describe GraphitiGraphQL::Federation do
                 resource.federated_type("OtherPosition").has_many :employees
                 schema!([resource])
                 instance1 = type_instance "OtherPosition",
-                  { id: employee1.other_position_id.to_s }
+                  {id: employee1.other_position_id.to_s}
                 instance2 = type_instance "OtherPosition",
-                  { id: employee2.other_position_id.to_s }
+                  {id: employee2.other_position_id.to_s}
                 expect {
                   execute(instance1, instance2)
                 }.to_not raise_error
@@ -437,9 +437,9 @@ RSpec.describe GraphitiGraphQL::Federation do
                 resource.federated_type("OtherPosition").has_many :employees
                 schema!([resource])
                 instance1 = type_instance "OtherPosition",
-                  { id: employee1.other_position_id.to_s }
+                  {id: employee1.other_position_id.to_s}
                 instance2 = type_instance "OtherPosition",
-                  { id: employee2.other_position_id.to_s }
+                  {id: employee2.other_position_id.to_s}
                 batch1, batch2 = execute(instance1, instance2)
                 expect(batch1.map { |r| r[:salary] }).to eq([100_000, 100_000])
                 expect(batch2.map { |r| r[:salary] }).to eq([100_000, 100_000])
@@ -459,9 +459,9 @@ RSpec.describe GraphitiGraphQL::Federation do
 
           it "is honored" do
             instance1 = type_instance "OtherPosition",
-              { id: employee1.other_position_id.to_s }
+              {id: employee1.other_position_id.to_s}
             instance2 = type_instance "OtherPosition",
-              { id: employee2.other_position_id.to_s }
+              {id: employee2.other_position_id.to_s}
             batch1, batch2 = execute(instance1, instance2)
             expect(batch1.map { |r| r[:last_name] }).to eq(["FOO", "FOO"])
             expect(batch2.map { |r| r[:last_name] }).to eq(["FOO", "FOO"])
@@ -477,9 +477,9 @@ RSpec.describe GraphitiGraphQL::Federation do
 
           it "still works" do
             instance1 = type_instance "OtherPosition",
-              { id: employee1.other_position_id.to_s }
+              {id: employee1.other_position_id.to_s}
             instance2 = type_instance "OtherPosition",
-              { id: employee2.other_position_id.to_s }
+              {id: employee2.other_position_id.to_s}
 
             batch1 = nil
             batch2 = nil
@@ -501,9 +501,9 @@ RSpec.describe GraphitiGraphQL::Federation do
               foreign_key: :other_pos_id
             schema!([resource])
             instance1 = type_instance "OtherPosition",
-              { id: employee1.other_pos_id.to_s }
+              {id: employee1.other_pos_id.to_s}
             instance2 = type_instance "OtherPosition",
-              { id: employee2.other_pos_id.to_s }
+              {id: employee2.other_pos_id.to_s}
             batch1, batch2 = execute(instance1, instance2)
             expect(batch1.map { |r| r[:id] })
               .to eq([employee1.id.to_s, employee3.id.to_s])
@@ -530,9 +530,9 @@ RSpec.describe GraphitiGraphQL::Federation do
           it "works by referencing the serialized value" do
             schema!([resource])
             instance1 = type_instance "OtherPosition",
-              { id: employee1.other_pos_id.to_s }
+              {id: employee1.other_pos_id.to_s}
             instance2 = type_instance "OtherPosition",
-              { id: employee2.other_pos_id.to_s }
+              {id: employee2.other_pos_id.to_s}
             batch1, batch2 = execute(instance1, instance2)
             expect(batch1.map { |r| r[:id] })
               .to eq([employee1.id.to_s, employee3.id.to_s])
@@ -558,9 +558,9 @@ RSpec.describe GraphitiGraphQL::Federation do
             it "works by casting to a string" do
               schema!([resource])
               instance1 = type_instance "OtherPosition",
-                { id: employee1.other_pos_id.to_s }
+                {id: employee1.other_pos_id.to_s}
               instance2 = type_instance "OtherPosition",
-                { id: employee2.other_pos_id.to_s }
+                {id: employee2.other_pos_id.to_s}
               batch1, batch2 = execute(instance1, instance2)
               expect(batch1.map { |r| r[:id] })
                 .to eq([employee1.id.to_s, employee3.id.to_s])
@@ -575,12 +575,12 @@ RSpec.describe GraphitiGraphQL::Federation do
             resource.federated_type("OtherPosition").has_many :employees
             schema!([resource])
             instance1 = type_instance "OtherPosition",
-              { id: employee1.other_position_id.to_s }
+              {id: employee1.other_position_id.to_s}
             instance2 = type_instance "OtherPosition",
-              { id: employee2.other_position_id.to_s }
+              {id: employee2.other_position_id.to_s}
             batch1, batch2 = execute(instance1, instance2, {
               filter: {
-                firstName: { eq: [employee1.first_name, employee3.first_name] }
+                firstName: {eq: [employee1.first_name, employee3.first_name]}
               }
             })
             expect(batch1.map { |r| r[:id] }).to eq([employee1.id.to_s])
@@ -593,11 +593,11 @@ RSpec.describe GraphitiGraphQL::Federation do
             resource.federated_type("OtherPosition").has_many :employees
             schema!([resource])
             instance1 = type_instance "OtherPosition",
-              { id: employee1.other_position_id.to_s }
+              {id: employee1.other_position_id.to_s}
             instance2 = type_instance "OtherPosition",
-              { id: employee2.other_position_id.to_s }
+              {id: employee2.other_position_id.to_s}
             batch1, batch2 = execute(instance1, instance2, {
-              sort: [{ att: "firstName", dir: "desc" }]
+              sort: [{att: "firstName", dir: "desc"}]
             })
             expect(batch1.map { |r| r[:id] })
               .to eq([employee4.id.to_s, employee1.id.to_s])
@@ -612,13 +612,13 @@ RSpec.describe GraphitiGraphQL::Federation do
               resource.federated_type("OtherPosition").has_many :employees
               schema!([resource])
               instance = type_instance "OtherPosition",
-                { id: employee1.other_position_id.to_s }
-              batch = GraphQL::Batch.batch do
+                {id: employee1.other_position_id.to_s}
+              batch = GraphQL::Batch.batch {
                 instance.employees({
-                  page: { size: 1, number: 2 },
+                  page: {size: 1, number: 2},
                   lookahead: lookahead
                 })
-              end
+              }
               expect(batch.map { |r| r[:id] }).to eq([employee4.id.to_s])
             end
           end
@@ -628,12 +628,12 @@ RSpec.describe GraphitiGraphQL::Federation do
               resource.federated_type("OtherPosition").has_many :employees
               schema!([resource])
               instance1 = type_instance "OtherPosition",
-                { id: employee1.other_position_id.to_s }
+                {id: employee1.other_position_id.to_s}
               instance2 = type_instance "OtherPosition",
-                { id: employee2.other_position_id.to_s }
+                {id: employee2.other_position_id.to_s}
               expect {
                 execute(instance1, instance2, {
-                  page: { size: 1 }
+                  page: {size: 1}
                 })
               }.to raise_error(Graphiti::Errors::UnsupportedPagination)
             end
@@ -664,7 +664,9 @@ RSpec.describe GraphitiGraphQL::Federation do
           primary_endpoint "/visas"
           self.model = PORO::Visa
           self.type = :visas
-          def self.name;"PORO::FederatedVisaResource";end
+          def self.name
+            "PORO::FederatedVisaResource"
+          end
         end
       end
 
@@ -673,7 +675,9 @@ RSpec.describe GraphitiGraphQL::Federation do
           primary_endpoint "/gold_visas"
           self.model = PORO::GoldVisa
           self.type = :gold_visas
-          def self.name;"PORO::FederatedGoldVisaResource";end
+          def self.name
+            "PORO::FederatedGoldVisaResource"
+          end
         end
       end
 
@@ -682,20 +686,24 @@ RSpec.describe GraphitiGraphQL::Federation do
           primary_endpoint "/mastercards"
           self.model = PORO::Mastercard
           self.type = :mastercards
-          def self.name;"PORO::FederatedMastercardResource";end
+          def self.name
+            "PORO::FederatedMastercardResource"
+          end
         end
       end
 
       let!(:resource) do
-        resource = Class.new(PORO::ApplicationResource) do
+        resource = Class.new(PORO::ApplicationResource) {
           self.model = PORO::CreditCardResource
           self.type = :credit_cards
-          def self.name;"PORO::FederatedCreditCardResource";end
+          def self.name
+            "PORO::FederatedCreditCardResource"
+          end
           federated_type("Employee").has_many :credit_cards
           def base_scope
             {type: [:visas, :gold_visas, :mastercards]}
           end
-        end
+        }
         resource
       end
 
@@ -715,9 +723,9 @@ RSpec.describe GraphitiGraphQL::Federation do
       it "can load" do
         instance = type_instance "Employee",
           {id: visa.employee_id.to_s}
-        batch = GraphQL::Batch.batch do
+        batch = GraphQL::Batch.batch {
           instance.credit_cards(lookahead: lookahead)
-        end
+        }
         # NB ensure type and __typename are returned correctly
         expect(batch).to eq([
           {
@@ -789,7 +797,7 @@ RSpec.describe GraphitiGraphQL::Federation do
     it "cannot query the reference attribute when not in gql context" do
       position_resource.federated_belongs_to :other_emp
       schema!([position_resource])
-      allow(Graphiti).to receive(:context) { { graphql: false } }
+      allow(Graphiti).to receive(:context) { {graphql: false} }
       json = run(%(
         query {
           positions {
@@ -809,8 +817,8 @@ RSpec.describe GraphitiGraphQL::Federation do
       type = GraphitiGraphQL.schemas.graphql.types["OtherEmployee"]
       expect(type.graphql_name).to eq("OtherEmployee")
       expect(type.to_graphql.metadata[:federation_directives]).to eq([
-        { name: "key", arguments: [{name: "fields", values: "id"}] },
-        { name: "extends", arguments: nil }
+        {name: "key", arguments: [{name: "fields", values: "id"}]},
+        {name: "extends", arguments: nil}
       ])
     end
 
@@ -963,23 +971,23 @@ RSpec.describe GraphitiGraphQL::Federation do
       id = rand(9999)
       employee = PORO::Employee.create(id: id)
       type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
-      batch = GraphQL::Batch.batch do
-        type.resolve_reference({ id: id.to_s }, {}, lookahead)
-      end
+      batch = GraphQL::Batch.batch {
+        type.resolve_reference({id: id.to_s}, {}, lookahead)
+      }
       expect(batch[:id]).to eq(employee.id.to_s)
     end
 
     context "when the user selects specific fields" do
-      let(:lookahead_selections) { ["last_name", "age"]}
+      let(:lookahead_selections) { ["last_name", "age"] }
 
       it "only queries/returns those fields" do
         id = rand(9999)
         employee = PORO::Employee
           .create(id: id, last_name: "Amy #{rand(9999)}", age: rand(99))
         type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
-        batch = GraphQL::Batch.batch do
-          type.resolve_reference({ id: id.to_s }, {}, lookahead)
-        end
+        batch = GraphQL::Batch.batch {
+          type.resolve_reference({id: id.to_s}, {}, lookahead)
+        }
         expect(batch).to eq({
           id: employee.id.to_s,
           last_name: employee.last_name,
@@ -997,8 +1005,8 @@ RSpec.describe GraphitiGraphQL::Federation do
       position_resource.federated_belongs_to :other_employee
       schema!([position_resource])
       type = GraphitiGraphQL.schemas.graphql.types["OtherEmployee"]
-      expect(type.resolve_reference({ foo: "bar" }, {}, lookahead))
-        .to eq({ foo: "bar" })
+      expect(type.resolve_reference({foo: "bar"}, {}, lookahead))
+        .to eq({foo: "bar"})
     end
 
     context "when a field is serialized" do
@@ -1013,9 +1021,9 @@ RSpec.describe GraphitiGraphQL::Federation do
         employee = PORO::Employee
           .create(id: id, last_name: "Amy #{rand(9999)}")
         type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
-        batch = GraphQL::Batch.batch do
-          type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
-        end
+        batch = GraphQL::Batch.batch {
+          type.resolve_reference({id: employee.id.to_s}, {}, lookahead)
+        }
         expect(batch[:last_name]).to eq(employee.last_name.upcase)
       end
     end
@@ -1037,7 +1045,7 @@ RSpec.describe GraphitiGraphQL::Federation do
             type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
             expect {
               GraphQL::Batch.batch do
-                type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
+                type.resolve_reference({id: employee.id.to_s}, {}, lookahead)
               end
             }.to raise_error(Graphiti::Errors::UnreadableAttribute, /salary/)
           end
@@ -1051,7 +1059,7 @@ RSpec.describe GraphitiGraphQL::Federation do
             type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
             expect {
               GraphQL::Batch.batch do
-                type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
+                type.resolve_reference({id: employee.id.to_s}, {}, lookahead)
               end
             }.to_not raise_error
           end
@@ -1071,9 +1079,9 @@ RSpec.describe GraphitiGraphQL::Federation do
         it "works as normal, even when requested by the user" do
           employee = PORO::Employee.create(id: rand(9999))
           type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
-          batch = GraphQL::Batch.batch do
-            type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
-          end
+          batch = GraphQL::Batch.batch {
+            type.resolve_reference({id: employee.id.to_s}, {}, lookahead)
+          }
           expect(batch[:salary]).to eq(100_000)
         end
       end
@@ -1098,9 +1106,9 @@ RSpec.describe GraphitiGraphQL::Federation do
         employee = PORO::Employee
           .create(id: id, last_name: "Amy #{rand(9999)}")
         type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
-        batch = GraphQL::Batch.batch do
-          type.resolve_reference({ id: employee.last_name }, {}, lookahead)
-        end
+        batch = GraphQL::Batch.batch {
+          type.resolve_reference({id: employee.last_name}, {}, lookahead)
+        }
         expect(batch[:id]).to eq(employee.last_name)
         expect(batch[:last_name]).to eq(employee.last_name)
       end

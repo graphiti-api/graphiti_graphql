@@ -1021,7 +1021,6 @@ RSpec.describe GraphitiGraphQL do
         end
       end
 
-
       context "when custom type" do
         let!(:findme) do
           PORO::Employee.create(id: 999, first_name: "custom!")

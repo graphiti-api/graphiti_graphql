@@ -12,11 +12,11 @@ end
 
 # We don't want to add these as dependencies,
 # but do need to check things don't break
-if Gem::Version.new(ApolloFederation::VERSION) >= Gem::Version.new('2.0.0')
+if Gem::Version.new(ApolloFederation::VERSION) >= Gem::Version.new("2.0.0")
   raise "graphiti_graphql federation is incompatible with apollo-federation >= 2"
 end
 
-if Gem::Version.new(GraphQL::Batch::VERSION) >= Gem::Version.new('1.0.0')
+if Gem::Version.new(GraphQL::Batch::VERSION) >= Gem::Version.new("1.0.0")
   raise "graphiti_graphql federation is incompatible with graphql-batch >= 1"
 end
 
@@ -24,7 +24,6 @@ require "graphiti_graphql"
 
 module GraphitiGraphQL
   module Federation
-
     def self.external_resources
       @external_resources ||= {}
     end
@@ -60,12 +59,12 @@ module GraphitiGraphQL
 
       def perform(ids)
         @params[:filter] ||= {}
-        @params[:filter].merge!(@foreign_key => { eq: ids.join(",") })
+        @params[:filter][@foreign_key] = {eq: ids.join(",")}
 
         if ids.length > 1 && @params[:page]
           raise Graphiti::Errors::UnsupportedPagination
         elsif !@params[:page]
-          @params[:page] = { size: 999 }
+          @params[:page] = {size: 999}
         end
 
         Util.with_gql_context do
@@ -87,8 +86,8 @@ module GraphitiGraphQL
 
       def perform(ids)
         Util.with_gql_context do
-          params = { filter: { id: { eq: ids.join(",") } } }
-          params[:fields] = { @resource_class.type => @fields.join(",") }
+          params = {filter: {id: {eq: ids.join(",")}}}
+          params[:fields] = {@resource_class.type => @fields.join(",")}
           records = @resource_class.all(params).as_json[:data]
           pk = ->(record) { record[:id].to_s }
           map = records.index_by(&pk)
@@ -164,9 +163,9 @@ module GraphitiGraphQL
             ExternalResource.new(type)
           resource.add_relationship(:has_many, name, self, foreign_key)
 
-          attribute = attributes.find do |name, config|
+          attribute = attributes.find { |name, config|
             name.to_sym == foreign_key && !!config[:readable] && !!config[:filterable]
-          end
+          }
           has_filter = filters.key?(foreign_key)
           if !attribute && !has_filter
             attribute foreign_key, :integer,
@@ -231,13 +230,14 @@ ApolloFederation::EntitiesField::ClassMethods.module_eval do
 end
 
 module EntitiesFieldOverride
-  def _entities(representations:, lookahead:) # accept the lookahead as argument
+  # accept the lookahead as argument
+  def _entities(representations:, lookahead:)
     representations.map do |reference|
       typename = reference[:__typename]
       type = context.warden.get_type(typename)
       if type.nil? || type.kind != GraphQL::TypeKinds::OBJECT
         raise "The _entities resolver tried to load an entity for type \"#{typename}\"," \
-              ' but no object type of that name was found in the schema'
+              " but no object type of that name was found in the schema"
       end
 
       type_class = type.is_a?(GraphQL::ObjectType) ? type.metadata[:type_class] : type
