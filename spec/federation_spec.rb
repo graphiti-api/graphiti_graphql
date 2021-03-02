@@ -39,7 +39,7 @@ RSpec.describe GraphitiGraphQL::Federation do
   end
 
   def type_instance(type_name, object)
-    type = Graphiti.graphql_schema.schema.types[type_name]
+    type = GraphitiGraphQL.schemas.graphql.types[type_name]
     type.send(:new, object, {}) # third arg is context
   end
 
@@ -54,7 +54,7 @@ RSpec.describe GraphitiGraphQL::Federation do
 
   context "when federating" do
     it "adds the key directive to all resource types" do
-      type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+      type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
       expect(type.to_graphql.metadata[:federation_directives]).to eq([
         { name: "key", arguments: [{name: "fields", values: "id"}] }
       ])
@@ -65,7 +65,7 @@ RSpec.describe GraphitiGraphQL::Federation do
     it "defines the external type correctly" do
       resource.federated_type("OtherPosition").has_many :employees
       schema!([resource])
-      type = Graphiti.graphql_schema.schema.types["OtherPosition"]
+      type = GraphitiGraphQL.schemas.graphql.types["OtherPosition"]
       expect(type.graphql_name).to eq("OtherPosition")
       expect(type.to_graphql.metadata[:federation_directives]).to eq([
         { name: "key", arguments: [{name: "fields", values: "id"}] },
@@ -806,7 +806,7 @@ RSpec.describe GraphitiGraphQL::Federation do
     it "defines the external type correctly" do
       position_resource.federated_belongs_to :other_employee
       schema!([position_resource])
-      type = Graphiti.graphql_schema.schema.types["OtherEmployee"]
+      type = GraphitiGraphQL.schemas.graphql.types["OtherEmployee"]
       expect(type.graphql_name).to eq("OtherEmployee")
       expect(type.to_graphql.metadata[:federation_directives]).to eq([
         { name: "key", arguments: [{name: "fields", values: "id"}] },
@@ -962,7 +962,7 @@ RSpec.describe GraphitiGraphQL::Federation do
     it "is defined as a local resource fetch for local resources" do
       id = rand(9999)
       employee = PORO::Employee.create(id: id)
-      type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+      type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
       batch = GraphQL::Batch.batch do
         type.resolve_reference({ id: id.to_s }, {}, lookahead)
       end
@@ -976,7 +976,7 @@ RSpec.describe GraphitiGraphQL::Federation do
         id = rand(9999)
         employee = PORO::Employee
           .create(id: id, last_name: "Amy #{rand(9999)}", age: rand(99))
-        type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+        type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
         batch = GraphQL::Batch.batch do
           type.resolve_reference({ id: id.to_s }, {}, lookahead)
         end
@@ -989,14 +989,14 @@ RSpec.describe GraphitiGraphQL::Federation do
     end
 
     it "is not defined on non-resource types" do
-      type = Graphiti.graphql_schema.schema.types["Page"]
+      type = GraphitiGraphQL.schemas.graphql.types["Page"]
       expect(type).to_not respond_to(:resolve_reference)
     end
 
     it "is defined as a passthrough for remote resources" do
       position_resource.federated_belongs_to :other_employee
       schema!([position_resource])
-      type = Graphiti.graphql_schema.schema.types["OtherEmployee"]
+      type = GraphitiGraphQL.schemas.graphql.types["OtherEmployee"]
       expect(type.resolve_reference({ foo: "bar" }, {}, lookahead))
         .to eq({ foo: "bar" })
     end
@@ -1012,7 +1012,7 @@ RSpec.describe GraphitiGraphQL::Federation do
         id = rand(9999)
         employee = PORO::Employee
           .create(id: id, last_name: "Amy #{rand(9999)}")
-        type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+        type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
         batch = GraphQL::Batch.batch do
           type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
         end
@@ -1034,7 +1034,7 @@ RSpec.describe GraphitiGraphQL::Federation do
 
           it "raises error" do
             employee = PORO::Employee.create(id: rand(9999))
-            type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+            type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
             expect {
               GraphQL::Batch.batch do
                 type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
@@ -1048,7 +1048,7 @@ RSpec.describe GraphitiGraphQL::Federation do
 
           it "does not raise error" do
             employee = PORO::Employee.create(id: rand(9999))
-            type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+            type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
             expect {
               GraphQL::Batch.batch do
                 type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
@@ -1070,7 +1070,7 @@ RSpec.describe GraphitiGraphQL::Federation do
 
         it "works as normal, even when requested by the user" do
           employee = PORO::Employee.create(id: rand(9999))
-          type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+          type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
           batch = GraphQL::Batch.batch do
             type.resolve_reference({ id: employee.id.to_s }, {}, lookahead)
           end
@@ -1097,7 +1097,7 @@ RSpec.describe GraphitiGraphQL::Federation do
         id = rand(9999)
         employee = PORO::Employee
           .create(id: id, last_name: "Amy #{rand(9999)}")
-        type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+        type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
         batch = GraphQL::Batch.batch do
           type.resolve_reference({ id: employee.last_name }, {}, lookahead)
         end

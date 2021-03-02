@@ -26,16 +26,17 @@ def schema!(entrypoints = nil)
     resources.reject! { |r| r.name.nil? }
     collected = []
     resources.reverse_each do |resource|
-      collected << resource unless collected.find { |c| c.name == resource.name }
+      already_collected = collected.find { |c| c.name == resource.name }
+      collected << resource unless already_collected
     end
     resources = collected
     Graphiti.instance_variable_set(:@resources, resources)
   end
-  Graphiti.graphql_schema!(entrypoints)
+  GraphitiGraphQL.schemas.generate!(entrypoints)
 end
 
 def schema_type(name)
-  json = JSON.parse(Graphiti.graphql_schema.to_json)
+  json = JSON.parse(GraphitiGraphQL.schemas.graphql.to_json)
   json["data"]["__schema"]["types"].find { |t| t["name"] == name }
 end
 
@@ -57,7 +58,7 @@ RSpec.configure do |config|
   config.after do
     PORO::DB.clear
     GraphitiGraphQL.schema_class = nil
-    GraphitiGraphQL.instance_variable_set(:@define_context, nil)
+    GraphitiGraphQL.config.instance_variable_set(:@define_context, nil)
   end
 
   config.around do |e|

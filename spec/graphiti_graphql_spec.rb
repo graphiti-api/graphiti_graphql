@@ -2450,7 +2450,7 @@ RSpec.describe GraphitiGraphQL do
 
     context "when max_depth is set" do
       before do
-        Graphiti.graphql_schema.schema.max_depth(2)
+        GraphitiGraphQL.schemas.graphql.max_depth(2)
       end
 
       it "is respected" do

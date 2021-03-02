@@ -51,7 +51,7 @@ RSpec.describe GraphitiGraphQL::Schema do
 
       it "does not modify the existing class" do
         expect(gql_schema.types.keys.length)
-          .to be < Graphiti.graphql_schema.schema.types.length
+          .to be < GraphitiGraphQL.schemas.graphql.types.length
         expect(gql_schema.types).to include("GQLCustomType")
         expect(gql_schema.types).to_not include("POROEmployee")
       end
@@ -61,17 +61,17 @@ RSpec.describe GraphitiGraphQL::Schema do
       end
 
       it "is merged with graphiti-generated schema" do
-        types = Graphiti.graphql_schema.schema.types.keys
+        types = GraphitiGraphQL.schemas.graphql.types
         expect(types).to include("GQLCustomType")
         expect(types).to include("POROEmployee")
-        query = Graphiti.graphql_schema.schema.query
+        query = GraphitiGraphQL.schemas.graphql.query
         expect(query.fields).to have_key("employees")
         expect(query.fields).to have_key("things")
       end
 
       it "appends rather than overwrites orphan types" do
         expect(gql_schema.orphan_types).to eq([orphan_type])
-        orphans = Graphiti.graphql_schema.schema.orphan_types
+        orphans = GraphitiGraphQL.schemas.graphql.orphan_types
         expect(orphans.length).to be > 1
         expect(orphans).to include(orphan_type)
       end
@@ -138,12 +138,12 @@ RSpec.describe GraphitiGraphQL::Schema do
         end
 
         it "does not generate sort classes" do
-          schema = Graphiti.graphql_schema.schema
+          schema = GraphitiGraphQL.schemas.graphql
           expect(schema.types.keys.grep(/sort/i)).to be_empty
         end
 
         it "does not accept the sort argument" do
-          schema = Graphiti.graphql_schema.schema
+          schema = GraphitiGraphQL.schemas.graphql
           expect(schema.query.fields["employees"].arguments.keys)
             .to_not include("sort")
         end
@@ -165,12 +165,12 @@ RSpec.describe GraphitiGraphQL::Schema do
         end
 
         it "does not generate filter classes" do
-          schema = Graphiti.graphql_schema.schema
+          schema = GraphitiGraphQL.schemas.graphql
           expect(schema.types.keys.grep(/filter/i)).to be_empty
         end
 
         it "does not accept the filter argument" do
-          schema = Graphiti.graphql_schema.schema
+          schema = GraphitiGraphQL.schemas.graphql
           expect(schema.query.fields["employees"].arguments.keys)
             .to_not include("filter")
         end
@@ -178,7 +178,7 @@ RSpec.describe GraphitiGraphQL::Schema do
 
       context "when .define_context set" do
         before do
-          GraphitiGraphQL.define_context do |ctx|
+          GraphitiGraphQL.config.define_context do |ctx|
             {user: ctx.current_user}
           end
         end
@@ -233,7 +233,7 @@ RSpec.describe GraphitiGraphQL::Schema do
         expect {
           schema!([resource])
         }.to_not raise_error
-        employee_type = Graphiti.graphql_schema.schema.types["POROEmployee"]
+        employee_type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
         fields = employee_type.fields
         expect(fields).to_not have_key("remotePositions")
       end

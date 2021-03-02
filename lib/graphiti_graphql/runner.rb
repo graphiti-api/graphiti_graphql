@@ -11,9 +11,9 @@ module GraphitiGraphQL
         if resource_class
           run_query(schema, resource_class, selection, query)
         else
-          Graphiti.graphql_schema.schema.execute query_string,
+          GraphitiGraphQL.schemas.graphql.execute query_string,
             variables: variables,
-            context: GraphitiGraphQL.get_context
+            context: GraphitiGraphQL.config.get_context
         end
       end
     end
@@ -75,7 +75,7 @@ module GraphitiGraphQL
     end
 
     def graphiti_schema
-      Graphiti.graphql_schema.graphiti_schema
+      GraphitiGraphQL.schemas.graphiti
     end
 
     def schema_resource_for_selection(selection, parent_resource)
@@ -146,7 +146,7 @@ module GraphitiGraphQL
       end
 
       fragments.each do |fragment|
-        resource_name = Graphiti.graphql_schema.type_registry[fragment.type.name][:resource]
+        resource_name = GraphitiGraphQL.schemas.generated.type_registry[fragment.type.name][:resource]
         klass = graphiti_schema.resources.find { |r| r.name == resource_name }
         _, _, fragment_sideload_selections = gather_fields fragment.selections,
           klass,

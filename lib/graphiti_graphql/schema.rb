@@ -417,8 +417,9 @@ module GraphitiGraphQL
         klass = Module.new
         klass.send(:include, self.class.base_interface)
         klass.definition_methods do
+          # rubocop:disable Lint/NestedMethodDefinition(Standard)
           def resolve_type(object, context)
-            Graphiti.graphql_schema.schema.types[object[:__typename]]
+            GraphitiGraphQL.schemas.graphql.types[object[:__typename]]
           end
         end
       else

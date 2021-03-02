@@ -66,8 +66,8 @@ module GraphitiGraphQL
           # We want to reload the schema when classes change
           # But this way, you only pay the cost (time) when the GraphQL endpoint
           # is actually hit
-          if Graphiti.graphql_schema?
-            Graphiti.graphql_schema = nil
+          if GraphitiGraphQL.schemas.generated?
+            GraphitiGraphQL.schemas.clear!
           end
         end
       end

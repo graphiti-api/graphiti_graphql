@@ -11,38 +11,58 @@ require "graphiti_graphql/schema"
 require "graphiti_graphql/runner"
 require "graphiti_graphql/util"
 
-Graphiti.class_eval do
-  class << self
-    attr_writer :graphql_schema
-  end
-
-  # TODO probably move these off of Graphiti
-  def self.gql(query, variables)
-    runner = ::GraphitiGraphQL::Runner.new
-    runner.execute(query, variables, graphql_schema.schema)
-  end
-
-  def self.graphql_schema
-    @graphql_schema ||= GraphitiGraphQL::Schema.generate
-  end
-
-  def self.graphql_schema?
-    !!@graphql_schema
-  end
-
-  def self.graphql_schema!(entrypoint_resources = nil)
-    @graphql_schema = GraphitiGraphQL::Schema.generate(entrypoint_resources)
-  end
-end
-
 module GraphitiGraphQL
-  class Error < StandardError; end
-
   class Configuration
     attr_accessor :schema_reloading
 
     def initialize
       self.schema_reloading = true
+    end
+
+    def define_context(&blk)
+      @define_context = blk
+    end
+
+    def get_context
+      obj = Graphiti.context[:object]
+      if @define_context
+        @define_context.call(obj)
+      else
+        {object: obj}
+      end
+    end
+  end
+
+  module Runnable
+    def gql(query, variables)
+      runner = ::GraphitiGraphQL::Runner.new
+      runner.execute(query, variables, GraphitiGraphQL.schemas.graphql)
+    end
+  end
+
+  class SchemaProxy
+    def graphql
+      generated.schema
+    end
+
+    def graphiti
+      generated.graphiti_schema
+    end
+
+    def generated
+      @generated ||= GraphitiGraphQL::Schema.generate
+    end
+
+    def generate!(entrypoint_resources = nil)
+      @generated = GraphitiGraphQL::Schema.generate(entrypoint_resources)
+    end
+
+    def generated?
+      !!@generated
+    end
+
+    def clear!
+      @generated = nil
     end
   end
 
@@ -54,19 +74,12 @@ module GraphitiGraphQL
     @config ||= Configuration.new
   end
 
-  def self.define_context(&blk)
-    @define_context = blk
-  end
-
-  def self.get_context
-    obj = Graphiti.context[:object]
-    if @define_context
-      @define_context.call(obj)
-    else
-      {object: obj}
-    end
+  def self.schemas
+    @schemas ||= SchemaProxy.new
   end
 end
+
+Graphiti.extend(GraphitiGraphQL::Runnable)
 
 if defined?(::Rails)
   require "graphiti_graphql/engine"
