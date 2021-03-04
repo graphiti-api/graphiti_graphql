@@ -48,16 +48,6 @@ module GraphitiGraphQL
       end
     end
 
-    # We store a list of all federated relationships
-    # Clear that list when classes are cleared so we don't keep appending
-    initializer "graphiti_graphql.clear_federation" do |app|
-      if defined?(GraphitiGraphQL::Federation)
-        GraphitiGraphQL::Engine.reloader_class.after_class_unload do
-          GraphitiGraphQL::Federation.clear!
-        end
-      end
-    end
-
     initializer "graphiti_graphql.schema_reloading" do |app|
       # Only reload the schema if we ask for it
       # Some may want to avoid the performance penalty

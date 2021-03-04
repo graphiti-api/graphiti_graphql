@@ -100,8 +100,13 @@ module GraphitiGraphQL
         end
       end
 
+      external_resources = {}
+      Graphiti.resources.each do |r|
+        external_resources.merge!(r.config[:federated_resources] || {})
+      end
+
       # NB: test already registered bc 2 things have same relationship
-      GraphitiGraphQL::Federation.external_resources.each_pair do |klass_name, config|
+      external_resources.each_pair do |klass_name, config|
         pre_registered = !!type_registry[klass_name]
         external_klass = if pre_registered
           type_registry[klass_name][:type]

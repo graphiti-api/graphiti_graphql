@@ -24,14 +24,6 @@ require "graphiti_graphql"
 
 module GraphitiGraphQL
   module Federation
-    def self.external_resources
-      @external_resources ||= {}
-    end
-
-    def self.clear!
-      @external_resources = {}
-    end
-
     def self.setup!
       Graphiti::Resource.send(:include, ResourceDSL)
       schema = GraphitiGraphQL::Schema
@@ -155,12 +147,14 @@ module GraphitiGraphQL
           TypeProxy.new(self, type_name)
         end
 
+        def federated_resources
+          config[:federated_resources] ||= {}
+        end
+
         # TODO: raise error if belongs_to doesn't have corresponding filter (on schema gen)
-        # TODO: hang these on the resource classes themselves
         def federated_has_many(name, type:, foreign_key: nil)
           foreign_key ||= :"#{type.underscore}_id"
-          resource = GraphitiGraphQL::Federation.external_resources[type] ||=
-            ExternalResource.new(type)
+          resource = federated_resources[type] ||= ExternalResource.new(type)
           resource.add_relationship(:has_many, name, self, foreign_key)
 
           attribute = attributes.find { |name, config|
@@ -188,24 +182,18 @@ module GraphitiGraphQL
         def federated_belongs_to(name, type: nil, foreign_key: nil)
           type ||= name.to_s.camelize
           foreign_key ||= :"#{name.to_s.underscore}_id"
-          resource = GraphitiGraphQL::Federation.external_resources[type] ||=
-            ExternalResource.new(type)
+          resource = federated_resources[type] ||= ExternalResource.new(type)
           resource.add_relationship(:belongs_to, name, self, foreign_key)
 
           attribute name, :hash, readable: :gql?, only: [:readable], schema: false do
-            fk = if prc = self.class.attribute_blocks[foreign_key]
-              instance_eval(&prc)
-            else
-              @object.send(foreign_key)
-            end
-            {
-              __typename: type,
-              id: fk.to_s
-            }
+            prc = self.class.attribute_blocks[foreign_key]
+            fk = prc ? instance_eval(&prc) : @object.send(foreign_key)
+            {__typename: type, id: fk.to_s}
           end
         end
       end
 
+      # Certain attributes should only work in GQL context
       def gql?
         Graphiti.context[:graphql]
       end

@@ -35,7 +35,6 @@ RSpec.describe GraphitiGraphQL::Federation do
     @schema.base_object = @original_base_object
     @schema.base_interface = @original_base_interface
     GraphitiGraphQL::Schema.federation = false
-    GraphitiGraphQL::Federation.clear!
   end
 
   def type_instance(type_name, object)
