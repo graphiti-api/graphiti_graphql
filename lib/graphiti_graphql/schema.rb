@@ -93,7 +93,7 @@ module GraphitiGraphQL
             .find { |r| r.name == config[:resource] }
           # TODO: maybe turn off the graphiti debug for these?
           local_type.define_singleton_method :resolve_reference do |reference, context, lookahead|
-            Federation::BelongsToLoader
+            Federation::Loaders::BelongsTo
               .for(local_resource, lookahead.selections.map(&:name))
               .load(reference[:id])
           end
@@ -173,7 +173,7 @@ module GraphitiGraphQL
           params[:sort] = sort
         end
 
-        Federation::HasManyLoader
+        Federation::Loaders::HasMany
           .for(local_resource, params, relationship.foreign_key)
           .load(object[:id])
       end
