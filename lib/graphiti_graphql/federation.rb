@@ -27,6 +27,7 @@ require "graphiti_graphql/federation/external_resource"
 require "graphiti_graphql/federation/external_relationship"
 require "graphiti_graphql/federation/resource_dsl"
 require "graphiti_graphql/federation/apollo_federation_override"
+require "graphiti_graphql/federation/schema_decorator"
 
 module GraphitiGraphQL
   module Federation
