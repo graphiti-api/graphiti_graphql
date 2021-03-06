@@ -47,10 +47,40 @@ end
 
 #### Adding Federation Support
 
+Add to the Gemfile
+
 ```ruby
 gem "apollo-federation"
 gem "graphql-batch"
 ```
+
+And change the way we require `graphiti_graphql`:
+
+```ruby
+gem "graphiti_graphql", require: "graphiti_graphql/federation"
+```
+
+To create a federated relationship:
+
+```ruby
+# PositionResource
+federated_belongs_to :employee
+```
+
+Or pass `type` and/or `foreign_key` to customize:
+
+```ruby
+# type here is the GraphQL Type
+federated_belongs_to :employee, type: "MyEmployee", foreign_key: :emp_id
+```
+
+For `has_many` it's a slightly different syntax because we're adding the relationship to the ***remote** type:
+
+```ruby
+federated_type("Employee").has_many :positions # foreign_key: optional
+```
+
+Remember that any time you make a change that affects the schema, you will have to bounce your federation gateway. This is how Apollo Federation works when not in "managed" mode.
 
 #### GraphiQL
 
