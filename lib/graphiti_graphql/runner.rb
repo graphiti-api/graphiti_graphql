@@ -68,7 +68,6 @@ module GraphitiGraphQL
         .find { |r| r.type == name.pluralize.underscore }
     end
 
-
     def schema_resource_for_selection(selection, parent_resource)
       if parent_resource
         parent_resource.related_resource(selection.name.underscore.to_sym)

@@ -62,16 +62,16 @@ module GraphitiGraphQL
 
       graphiti_schema = GraphitiGraphQL::GraphitiSchema::Wrapper
         .new(Graphiti::Schema.generate)
+      instance.graphiti_schema = graphiti_schema
+      instance.schema = schema
 
       entries = entrypoint_resources || entrypoints
-      instance.apply_query(graphiti_schema, schema, entries)
+      instance.apply_query(entries)
 
       # NB if we add mutation support, make sure this is applied after
       if federation?
         schema.use GraphQL::Batch
       end
-      instance.schema = schema
-      instance.graphiti_schema = graphiti_schema
       instance
     end
 
@@ -87,7 +87,7 @@ module GraphitiGraphQL
     # TODO put this in a Federation::Schema module
     # Maybe even the External classes themselves?
     # TODO assign/assign_each
-    def apply_federation(graphiti_schema, graphql_schema)
+    def apply_federation
       type_registry.each_pair do |name, config|
         if config[:resource]
           local_type = config[:type]
@@ -137,7 +137,7 @@ module GraphitiGraphQL
         # TODO: only do it if field not already defined
         config.relationships.each_pair do |name, relationship|
           if relationship.has_many?
-            define_federated_has_many(graphiti_schema, external_klass, relationship)
+            define_federated_has_many(external_klass, relationship)
           elsif relationship.belongs_to?
             define_federated_belongs_to(config, relationship)
           end
@@ -145,8 +145,7 @@ module GraphitiGraphQL
       end
     end
 
-    # TODO: refactor to not constantly pass schemas around
-    def define_federated_has_many(graphiti_schema, external_klass, relationship)
+    def define_federated_has_many(external_klass, relationship)
       local_name = GraphitiGraphQL::GraphitiSchema::Resource
         .gql_name(relationship.local_resource_class.name)
       local_type = type_registry[local_name][:type]
@@ -204,30 +203,30 @@ module GraphitiGraphQL
       end
     end
 
-    def apply_query(graphiti_schema, graphql_schema, entries)
-      query_type = generate_schema_query(graphql_schema, graphiti_schema, entries)
+    def apply_query(entries)
+      query_type = generate_schema_query(entries)
       if self.class.federation?
-        apply_federation(graphiti_schema, schema)
+        apply_federation
       end
 
       # NB - don't call .query here of federation will break things
-      if graphql_schema.instance_variable_get(:@query_object)
-        graphql_schema.instance_variable_set(:@query_object, nil)
-        graphql_schema.instance_variable_set(:@federation_query_object, nil)
+      if schema.instance_variable_get(:@query_object)
+        schema.instance_variable_set(:@query_object, nil)
+        schema.instance_variable_set(:@federation_query_object, nil)
       end
-      graphql_schema.orphan_types(orphans(graphql_schema))
-      graphql_schema.query(query_type)
-      graphql_schema.query # Actually fires the federation code
+      schema.orphan_types(orphans(schema))
+      schema.query(query_type)
+      schema.query # Actually fires the federation code
     end
 
-    def generate_schema_query(graphql_schema, graphiti_schema, entrypoint_resources = nil)
-      existing_query = graphql_schema.instance_variable_get(:@query) || graphql_schema.send(:find_inherited_value, :query)
+    def generate_schema_query(entrypoint_resources = nil)
+      existing_query = schema.instance_variable_get(:@query) || schema.send(:find_inherited_value, :query)
       # NB - don't call graphql_schema.query here of federation will break things
       query_class = Class.new(existing_query || self.class.base_object)
       # NB MUST be Query or federation-ruby will break things
       query_class.graphql_name "Query"
 
-      entrypoints(graphiti_schema, entrypoint_resources).each do |resource|
+      get_entrypoints(entrypoint_resources).each do |resource|
         next if resource.remote?
         generate_type(resource)
 
@@ -287,7 +286,7 @@ module GraphitiGraphQL
         top_level_single: true
     end
 
-    def entrypoints(graphiti_schema, manually_specified)
+    def get_entrypoints(manually_specified)
       resources = graphiti_schema.resources
       if manually_specified
         resources = resources.select { |r|
