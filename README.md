@@ -1,35 +1,65 @@
 # GraphitiGraphql
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/graphiti_graphql`. To experiment with that code, run `bin/console` for an interactive prompt.
+GraphQL (and Apollo Federation) support for Graphiti. Serve traditional Rails JSON, JSON:API or GraphQL with the same codebase.
 
-TODO: Delete this and the text above, and describe your gem
+### Setup
 
-## Installation
+Add to your `Gemfile`:
 
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'graphiti_graphql'
+```rb
+gem 'graphiti', ">= 1.2.32"
+gem "graphiti_graphql"
 ```
 
-And then execute:
+Mount the engine:
 
-    $ bundle
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  scope path: ApplicationResource.endpoint_namespace, defaults: { format: :jsonapi } do
+    # ... normal graphiti stuff ...
 
-Or install it yourself as:
+    mount GraphitiGraphQL::Engine, at: "/gql"
+  end
+end
+```
 
-    $ gem install graphiti_graphql
+For a default Graphiti app, you can now serve GraphQL by POSTing to `/api/v1/gql`.
 
-## Usage
+#### Blending with graphql-ruby
 
-TODO: Write usage instructions here
+Define your Schema and Type classes as normal. Then in an initializer:
 
-## Development
+```ruby
+# config/initializers/graphiti.rb
+GraphitiGraphQL.schema_class = MySchema
+```
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Your existing GraphQL endpoint will continue working as normal. But the GQL endpoint you mounted in `config/routes.rb` will now serve BOTH your existing schema AND your Graphiti-specific schema. Note these cannot (currently) be served side-by-side on under `query` within the *same* request.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+By default the GraphQL context will be `Graphiti.context[:object]`, which is the controller being called. You might want to customize this so your existing graphql-ruby code continues to expect the same context:
 
-## Contributing
+```ruby
+GraphitiGraphQL.define_context do |controller|
+  { current_user: controller.current_user }
+end
+```
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/graphiti_graphql.
+#### Adding Federation Support
+
+```ruby
+gem "apollo-federation"
+gem "graphql-batch"
+```
+
+#### GraphiQL
+
+```
+# If you want the graphiql editor
+gem "graphiql-rails"
+gem 'sprockets', '~> 3' # https://github.com/rmosolgo/graphiql-rails/issues/53
+# Uncomment "sprockets/railtie" in config/application.rb
+```
+
+### Configuration
+```
