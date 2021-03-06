@@ -62,4 +62,22 @@ gem 'sprockets', '~> 3' # https://github.com/rmosolgo/graphiql-rails/issues/53
 ```
 
 ### Configuration
+
+#### Entrypoints
+
+By default all Graphiti resources will expose their `index` and `show` functionality. IOW `EmployeeResource` now serves a list at `Query#employees` and a single employee at `Query#employee(id: 123)`. To limit the entrypoints:
+
+```ruby
+GraphitiGraphQL::Schema.entrypoints = [
+  EmployeeResource
+]
+```
+
+#### Schema Reloading
+
+You may want to automatically regenerate the GQL schema when when Rails reloads your classes, or you may not want to pay that performance penalty. To turn off the automatic reloading:
+
+```ruby
+# config/initializers/graphiti.rb
+GraphitiGraphQL.config.schema_reloading = false
 ```
