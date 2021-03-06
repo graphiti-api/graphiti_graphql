@@ -55,23 +55,11 @@ module GraphitiGraphQL
     def self.generate(entrypoint_resources = nil)
       instance = new
       schema = Class.new(::GraphitiGraphQL.schema_class || GraphQL::Schema)
-
-      if federation?
-        schema.send(:include, ApolloFederation::Schema)
-      end
-
       graphiti_schema = GraphitiGraphQL::GraphitiSchema::Wrapper
         .new(Graphiti::Schema.generate)
       instance.graphiti_schema = graphiti_schema
       instance.schema = schema
-
-      entries = entrypoint_resources || entrypoints
-      instance.apply_query(entries)
-
-      # NB if we add mutation support, make sure this is applied after
-      if federation?
-        schema.use GraphQL::Batch
-      end
+      instance.apply_query(entrypoint_resources || entrypoints)
       instance
     end
 
@@ -86,9 +74,7 @@ module GraphitiGraphQL
 
     def apply_query(entries)
       query_type = generate_schema_query(entries)
-      if self.class.federation?
-        Federation::SchemaDecorator.decorate(self)
-      end
+      Federation::SchemaDecorator.decorate(self) if self.class.federation?
 
       # NB - don't call .query here of federation will break things
       if schema.instance_variable_get(:@query_object)
@@ -101,7 +87,8 @@ module GraphitiGraphQL
     end
 
     def generate_schema_query(entrypoint_resources = nil)
-      existing_query = schema.instance_variable_get(:@query) || schema.send(:find_inherited_value, :query)
+      existing_query = schema.instance_variable_get(:@query)
+      existing_query ||= schema.send(:find_inherited_value, :query)
       # NB - don't call graphql_schema.query here of federation will break things
       query_class = Class.new(existing_query || self.class.base_object)
       # NB MUST be Query or federation-ruby will break things
@@ -331,10 +318,6 @@ module GraphitiGraphQL
 
       if implements
         implement(klass, type_registry[implements])
-      end
-
-      if self.class.federation?
-        klass.key fields: "id"
       end
 
       klass.field(:_type, String, null: false)

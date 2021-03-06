@@ -10,6 +10,9 @@ module GraphitiGraphQL
       end
 
       def decorate
+        @schema.schema.send(:include, ApolloFederation::Schema)
+        # NB if we add mutation support, make sure this is applied after
+        @schema.schema.use(GraphQL::Batch)
         add_resolve_reference
         add_external_resources
       end
@@ -20,6 +23,7 @@ module GraphitiGraphQL
         @schema.type_registry.each_pair do |name, config|
           if config[:resource]
             local_type = config[:type]
+            local_type.key(fields: "id") if local_type.respond_to?(:key)
             local_resource = Graphiti.resources
               .find { |r| r.name == config[:resource] }
             # TODO: maybe turn off the graphiti debug for these?
