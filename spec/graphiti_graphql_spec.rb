@@ -104,7 +104,7 @@ RSpec.describe GraphitiGraphQL do
 
       context "when the graphql_entrypoint is customized" do
         before do
-          resource.graphql_entrypoint = :exemplaryEmployees
+          resource.graphql_entrypoint = :exemplary_employees
           schema!
         end
 
@@ -137,7 +137,7 @@ RSpec.describe GraphitiGraphQL do
 
     describe "when the graphql entrypoint is customized" do
       before do
-        resource.graphql_entrypoint = :exemplaryEmployees
+        resource.graphql_entrypoint = :exemplary_employees
         schema!
       end
 
@@ -1621,7 +1621,7 @@ RSpec.describe GraphitiGraphQL do
           }
         ))
         expect(json).to eq({
-          credit_cards: [
+          creditCards: [
             {
               id: "1",
               _type: "visas",
@@ -1691,7 +1691,7 @@ RSpec.describe GraphitiGraphQL do
             }
           ))
           expect(json).to eq({
-            credit_cards: [
+            creditCards: [
               {transactions: []},
               {transactions: []},
               {transactions: [{amount: 100}]}
@@ -1714,7 +1714,7 @@ RSpec.describe GraphitiGraphQL do
               }
             ))
             expect(json).to eq({
-              credit_cards: [
+              creditCards: [
                 {
                   _type: "visas"
                 },
@@ -1743,7 +1743,7 @@ RSpec.describe GraphitiGraphQL do
               }
             ))
             expect(json).to eq({
-              credit_cards: [
+              creditCards: [
                 {
                   _type: "visas",
                   visaOnlyAttr: "visa only"
@@ -1786,7 +1786,7 @@ RSpec.describe GraphitiGraphQL do
                 }
               ))
               expect(json).to eq({
-                credit_cards: [
+                creditCards: [
                   {
                     _type: "visas",
                     transactions: [{amount: 100}, {amount: 200}]
@@ -1811,7 +1811,7 @@ RSpec.describe GraphitiGraphQL do
                 }
               ))
               expect(json).to eq({
-                credit_cards: [
+                creditCards: [
                   {
                     _type: "visas",
                     transactions: [{amount: 200}]
@@ -1836,7 +1836,7 @@ RSpec.describe GraphitiGraphQL do
                 }
               ))
               expect(json).to eq({
-                credit_cards: [
+                creditCards: [
                   {
                     _type: "visas",
                     transactions: [{amount: 200}, {amount: 100}]
@@ -1861,7 +1861,7 @@ RSpec.describe GraphitiGraphQL do
                 }
               ))
               expect(json).to eq({
-                credit_cards: [
+                creditCards: [
                   {
                     _type: "visas",
                     transactions: [{amount: 200}]
@@ -1889,7 +1889,7 @@ RSpec.describe GraphitiGraphQL do
             end
 
             def transactions(json)
-              json[:credit_cards][1][:visaRewards][0][:rewardTransactions]
+              json[:creditCards][1][:visaRewards][0][:rewardTransactions]
             end
 
             it "works" do
@@ -1981,7 +1981,7 @@ RSpec.describe GraphitiGraphQL do
                   }
                 }
               ))
-              rewards = json[:credit_cards][0][:visaRewards][0]
+              rewards = json[:creditCards][0][:visaRewards][0]
               expect(rewards[:rewardTransactions]).to eq([
                 {amount: 200}
               ])
@@ -2073,7 +2073,7 @@ RSpec.describe GraphitiGraphQL do
                 }
               ))
               expect(json).to eq({
-                credit_cards: [
+                creditCards: [
                   {_type: "visas"},
                   {_type: "gold_visas"},
                   {

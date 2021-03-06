@@ -4,14 +4,16 @@ module GraphitiGraphQL
       query = GraphQL::Query.new(schema, query_string, variables: variables)
       definition = query.document.definitions.first
       selection = definition.selections.first
-      resource_class = find_entrypoint_resource_class(selection.name)
+      is_graphiti = schemas.generated.query_field?(selection.name)
 
-      # TODO: instead, keep track of fields we add
+      # Wrap *everything* in context, in case of federated request
       Util.with_gql_context do
-        if resource_class
+        if is_graphiti
+          resource_class = schemas.generated
+            .resource_for_query_field(selection.name)
           run_query(schema, resource_class, selection, query)
         else
-          GraphitiGraphQL.schemas.graphql.execute query_string,
+          schemas.graphql.execute query_string,
             variables: variables,
             context: GraphitiGraphQL.config.get_context
         end
@@ -19,6 +21,10 @@ module GraphitiGraphQL
     end
 
     private
+
+    def schemas
+      GraphitiGraphQL.schemas
+    end
 
     def run_query(schema, resource_class, selection, query)
       if (errors = collect_errors(schema, query)).any?
@@ -49,20 +55,8 @@ module GraphitiGraphQL
       query.validation_errors + query.analysis_errors + query.context.errors
     end
 
-    # We can't just constantize the name from the schema
-    # Because classes can be reopened and modified in tests (or elsewhere, in theory)
-    def find_entrypoint_resource_class(entrypoint)
-      Graphiti.resources.find(&matches_entrypoint?(entrypoint))
-    end
-
     def find_entrypoint_schema_resource(entrypoint)
-      graphiti_schema.resources.find(&matches_entrypoint?(entrypoint))
-    end
-
-    def matches_entrypoint?(entrypoint)
-      lambda do |resource|
-        resource.graphql_entrypoint.to_s.underscore == entrypoint.pluralize.underscore
-      end
+      schemas.generated.schema_resource_for_query_field(entrypoint)
     end
 
     def introspection_query?(query)
@@ -70,13 +64,10 @@ module GraphitiGraphQL
     end
 
     def find_resource_by_selection_name(name)
-      graphiti_schema.resources
+      schemas.graphiti.resources
         .find { |r| r.type == name.pluralize.underscore }
     end
 
-    def graphiti_schema
-      GraphitiGraphQL.schemas.graphiti
-    end
 
     def schema_resource_for_selection(selection, parent_resource)
       if parent_resource
@@ -146,8 +137,8 @@ module GraphitiGraphQL
       end
 
       fragments.each do |fragment|
-        resource_name = GraphitiGraphQL.schemas.generated.type_registry[fragment.type.name][:resource]
-        klass = graphiti_schema.resources.find { |r| r.name == resource_name }
+        resource_name = schemas.generated.type_registry[fragment.type.name][:resource]
+        klass = schemas.graphiti.resources.find { |r| r.name == resource_name }
         _, _, fragment_sideload_selections = gather_fields fragment.selections,
           klass,
           params,

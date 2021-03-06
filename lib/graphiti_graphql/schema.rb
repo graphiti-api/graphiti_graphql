@@ -34,6 +34,7 @@ module GraphitiGraphQL
     end
 
     attr_accessor :type_registry, :schema, :graphiti_schema
+    attr_reader :query_fields
 
     def self.federation?
       !!@federation
@@ -80,6 +81,7 @@ module GraphitiGraphQL
 
     def initialize
       @type_registry = {}
+      @query_fields = {}
     end
 
     # TODO put this in a Federation::Schema module
@@ -246,22 +248,40 @@ module GraphitiGraphQL
       end
     end
 
+    def schema_resource_for_query_field(name)
+      @query_fields[name.underscore.to_sym]
+    end
+
+    def query_field?(name)
+      @query_fields.include?(name.underscore.to_sym)
+    end
+
+    # We can't just constantize the name from the schema
+    # Because classes can be reopened and modified in tests (or elsewhere, in theory)
+    def resource_for_query_field(name)
+      schema_resource = @query_fields[name.underscore.to_sym]
+      Graphiti.resources.find { |r| r.name == schema_resource.name }
+    end
+
     private
 
     def add_index(query_class, resource)
-      field = query_class.field resource.graphql_entrypoint,
+      field_name = resource.graphql_entrypoint.to_s.underscore.to_sym
+      field = query_class.field field_name,
         [type_registry[resource.graphql_class_name][:type]],
         "List #{resource.graphql_class_name(false).pluralize}",
         null: false
+      @query_fields[field_name] = resource
       define_arguments_for_sideload_field(field, resource)
     end
 
     def add_show(query_class, resource)
-      entrypoint = resource.graphql_entrypoint.to_s.singularize.to_sym
-      field = query_class.field entrypoint,
+      field_name = resource.graphql_entrypoint.to_s.underscore.singularize.to_sym
+      field = query_class.field field_name,
         type_registry[resource.graphql_class_name][:type],
         "Single #{resource.graphql_class_name(false).singularize}",
         null: true
+      @query_fields[field_name] = resource
       define_arguments_for_sideload_field field,
         resource,
         top_level_single: true
