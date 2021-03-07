@@ -2,6 +2,8 @@
 
 GraphQL (and Apollo Federation) support for Graphiti. Serve traditional Rails JSON, JSON:API or GraphQL with the same codebase.
 
+Currently read-only, but you can add your own Mutations [manually](#blending-with-graphql-ruby).
+
 ## Setup
 
 Add to your `Gemfile`:
