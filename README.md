@@ -2,7 +2,7 @@
 
 GraphQL (and Apollo Federation) support for Graphiti. Serve traditional Rails JSON, JSON:API or GraphQL with the same codebase.
 
-### Setup
+## Setup
 
 Add to your `Gemfile`:
 
@@ -104,7 +104,7 @@ gem 'sprockets', '~> 3' # https://github.com/rmosolgo/graphiql-rails/issues/53
 # Uncomment "sprockets/railtie" in config/application.rb
 ```
 
-### Configuration
+## Configuration
 
 #### Entrypoints
 
