@@ -11,7 +11,7 @@ Pre-alpha. Stay tuned.
 Add to your `Gemfile`:
 
 ```rb
-gem 'graphiti', ">= 1.2.32"
+gem 'graphiti', ">= 1.2.33"
 gem "graphiti_graphql"
 ```
 
