@@ -28,6 +28,26 @@ For a default Graphiti app, you can now serve GraphQL by POSTing to `/api/v1/gql
 
 That's it 🎉!
 
+#### GraphiQL
+
+You can add the GraphiQL editor to the project via [graphiql-rails](https://github.com/rmosolgo/graphiql-rails) as normal, but to save you the time here are the steps to make it work when Rails is running in API-only mode:
+
+Add to the Gemfile:
+
+```ruby
+gem "graphiql-rails"
+gem 'sprockets', '~> 3' # https://github.com/rmosolgo/graphiql-rails/issues/53
+```
+
+And then in `config/application.rb`:
+
+```ruby
+# *Uncomment* this line!
+# require "sprockets/railtie"
+```
+
+## Usage
+
 #### Blending with graphql-ruby
 
 Define your Schema and Type classes as normal. Then in an initializer:
@@ -94,15 +114,6 @@ end
 ```
 
 Remember that any time you make a change that affects the schema, you will have to bounce your federation gateway. This is how Apollo Federation works when not in "managed" mode.
-
-#### GraphiQL
-
-```
-# If you want the graphiql editor
-gem "graphiql-rails"
-gem 'sprockets', '~> 3' # https://github.com/rmosolgo/graphiql-rails/issues/53
-# Uncomment "sprockets/railtie" in config/application.rb
-```
 
 ## Configuration
 
