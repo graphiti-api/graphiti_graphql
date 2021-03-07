@@ -137,3 +137,23 @@ You may want to automatically regenerate the GQL schema when when Rails reloads 
 # config/initializers/graphiti.rb
 GraphitiGraphQL.config.schema_reloading = false
 ```
+
+#### `.graphql_entrypoint`
+
+If the field you want on `Query` can't be inferred from the class name:
+
+```ruby
+class EmployeeResource < ApplicationResource
+  self.graphql_entrypoint = :workers
+end
+```
+
+You can now
+
+```
+query {
+  workers {
+    firstName
+  }
+}
+```
