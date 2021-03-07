@@ -115,7 +115,7 @@ federated_type("Employee").has_many :positions do
 end
 ```
 
-Remember that any time you make a change that affects the schema, you will have to bounce your federation gateway. This is how Apollo Federation works when not in "managed" mode.
+Remember that any time you make a change that affects the schema, you will have to bounce your federation gateway. This is how Apollo Federation works when not in "managed" mode and is unrelated to `graphiti_graphql`.
 
 ## Configuration
 
