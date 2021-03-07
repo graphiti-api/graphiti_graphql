@@ -638,6 +638,222 @@ RSpec.describe GraphitiGraphQL::Federation do
             end
           end
         end
+
+        context "when customizing with params block" do
+          def run(params = {})
+            instance1 = type_instance "OtherPosition",
+              {id: employee1.other_position_id.to_s}
+            instance2 = type_instance "OtherPosition",
+              {id: employee2.other_position_id.to_s}
+            execute(instance1, instance2, params)
+          end
+
+          def expected_position_ids
+            [employee1.other_position_id, employee2.other_position_id]
+          end
+
+          xit "already has foreign key and fields in params" do
+          end
+
+          context "when sorting" do
+            before do
+              resource.federated_type("OtherPosition").has_many :employees do
+                params do |hash|
+                  hash[:sort] = "-age"
+                end
+              end
+              schema!([resource])
+            end
+
+            it "works" do
+              expect(resource).to receive(:all)
+                .with(hash_including(
+                  filter: {
+                    other_position_id: {
+                      eq: expected_position_ids.join(",")
+                    }
+                  },
+                  sort: "-age"
+                ))
+                .and_call_original
+              batch1, batch2 = run
+              expect(batch1.map { |r| r[:id].to_i })
+                .to eq([employee4.id, employee1.id])
+              expect(batch2.map { |r| r[:id].to_i })
+                .to eq([employee3.id, employee2.id])
+            end
+
+            context "and also given runtime sort" do
+              it "obeys the params block" do
+                expect(resource).to receive(:all)
+                  .with(hash_including(
+                    filter: {
+                      other_position_id: {
+                        eq: expected_position_ids.join(",")
+                      }
+                    },
+                    sort: "-age"
+                  ))
+                  .and_call_original
+                batch1, batch2 = run(sort: "id")
+                expect(batch1.map { |r| r[:id].to_i })
+                  .to eq([employee4.id, employee1.id])
+                expect(batch2.map { |r| r[:id].to_i })
+                  .to eq([employee3.id, employee2.id])
+              end
+            end
+
+            context "and also given runtime filter" do
+              it "merges params" do
+                expect(resource).to receive(:all)
+                  .with(hash_including({
+                    filter: {
+                      age: {
+                        eq: 20
+                      },
+                      other_position_id: {
+                        eq: expected_position_ids.join(",")
+                      }
+                    }
+                  }))
+                  .and_call_original
+                batch1, batch2 = run(filter: {age: {eq: 20}})
+                expect(batch1.map { |r| r[:id].to_i })
+                  .to eq([])
+                expect(batch2.map { |r| r[:id].to_i })
+                  .to eq([employee2.id])
+              end
+            end
+          end
+
+          context "when filtering" do
+            before do
+              resource.federated_type("OtherPosition").has_many :employees do
+                params do |hash|
+                  hash[:filter][:age] = {eq: [10, 20, 40]}
+                end
+              end
+              schema!([resource])
+            end
+
+            it "works" do
+              expect(resource).to receive(:all)
+                .with(hash_including(
+                  filter: {
+                    other_position_id: {
+                      eq: expected_position_ids.join(",")
+                    },
+                    age: {eq: [10, 20, 40]}
+                  },
+                ))
+                .and_call_original
+              batch1, batch2 = run
+              expect(batch1.map { |r| r[:id].to_i })
+                .to eq([employee1.id, employee4.id])
+              expect(batch2.map { |r| r[:id].to_i })
+                .to eq([employee2.id])
+            end
+
+            context "and also given runtime sort" do
+              it "merges params" do
+                expect(resource).to receive(:all)
+                  .with(hash_including(
+                    filter: {
+                      other_position_id: {
+                        eq: expected_position_ids.join(",")
+                      },
+                      age: {eq: [10,20,40]}
+                    },
+                    sort: "-age"
+                  ))
+                  .and_call_original
+                batch1, batch2 = run(sort: "-age")
+                expect(batch1.map { |r| r[:id].to_i })
+                  .to eq([employee4.id, employee1.id])
+                expect(batch2.map { |r| r[:id].to_i })
+                  .to eq([employee2.id])
+              end
+            end
+
+            context "and also given runtime filter" do
+              context "that conflicts" do
+                it "obeys the params block" do
+                  expect(resource).to receive(:all)
+                    .with(hash_including(
+                      filter: {
+                        other_position_id: {
+                          eq: expected_position_ids.join(",")
+                        },
+                        age: {eq: [10,20,40]}
+                      },
+                    ))
+                    .and_call_original
+                  batch1, batch2 = run(filter: {age: {eq: 10}})
+                  expect(batch1.map { |r| r[:id].to_i })
+                    .to eq([employee1.id, employee4.id])
+                  expect(batch2.map { |r| r[:id].to_i })
+                    .to eq([employee2.id])
+                end
+              end
+
+              context "that does not conflict" do
+                it "merges params" do
+                  expect(resource).to receive(:all)
+                    .with(hash_including(
+                      filter: {
+                        other_position_id: {
+                          eq: expected_position_ids.join(",")
+                        },
+                        age: {eq: [10,20,40]},
+                        id: {eq: [employee4.id, employee2.id]}
+                      },
+                    ))
+                    .and_call_original
+                  batch1, batch2 = run({
+                    filter: {id: {eq: [employee4.id, employee2.id]}}
+                  })
+                  expect(batch1.map { |r| r[:id].to_i })
+                    .to eq([employee4.id])
+                  expect(batch2.map { |r| r[:id].to_i })
+                    .to eq([employee2.id])
+                end
+              end
+            end
+          end
+
+          context "when paginating" do
+            before do
+              resource.federated_type("OtherPosition").has_many :employees do
+                params do |hash|
+                  hash[:page] = { size: 1 }
+                end
+              end
+              schema!([resource])
+            end
+
+            it "works" do
+              expect(resource).to receive(:all)
+                .with(hash_including(
+                  filter: {
+                    other_position_id: {
+                      eq: employee1.other_position_id.to_s
+                    },
+                  },
+                  page: {size: 1}
+                ))
+                .and_call_original
+
+              instance = type_instance "OtherPosition",
+                {id: employee1.other_position_id.to_s}
+              batch = GraphQL::Batch.batch do
+                instance.employees(lookahead: lookahead)
+              end
+
+              expect(batch.map { |r| r[:id].to_i })
+                .to eq([employee1.id])
+            end
+          end
+        end
       end
     end
 

@@ -2,15 +2,18 @@ module GraphitiGraphQL
   module Federation
     module Loaders
       class HasMany < GraphQL::Batch::Loader
-        def initialize(resource_class, params, foreign_key)
-          @resource_class = resource_class
+        def initialize(external_relationship, params)
+          @external_relationship = external_relationship
+          @resource_class = external_relationship.local_resource_class
           @params = params
-          @foreign_key = foreign_key
+          @foreign_key = external_relationship.foreign_key
         end
 
         def perform(ids)
           @params[:filter] ||= {}
           @params[:filter][@foreign_key] = {eq: ids.join(",")}
+
+          @external_relationship.params_block&.call(@params)
 
           if ids.length > 1 && @params[:page]
             raise Graphiti::Errors::UnsupportedPagination

@@ -7,10 +7,11 @@ module GraphitiGraphQL
           @type_name = type_name
         end
 
-        def has_many(relationship_name, foreign_key: nil)
+        def has_many(relationship_name, foreign_key: nil, &blk)
           @caller.federated_has_many relationship_name,
             type: @type_name,
-            foreign_key: foreign_key
+            foreign_key: foreign_key,
+            &blk
         end
       end
 
@@ -30,10 +31,10 @@ module GraphitiGraphQL
 
         # * Add to the list of external graphql-ruby types we need in schema
         # * Add a readable and filterable FK, without clobbering pre-existing
-        def federated_has_many(name, type:, foreign_key: nil)
+        def federated_has_many(name, type:, foreign_key: nil, &blk)
           foreign_key ||= :"#{type.underscore}_id"
           resource = federated_resources[type] ||= ExternalResource.new(type)
-          resource.add_relationship(:has_many, name, self, foreign_key)
+          resource.add_relationship(:has_many, name, self, foreign_key, &blk)
 
           attribute = attributes.find { |name, config|
             name.to_sym == foreign_key &&

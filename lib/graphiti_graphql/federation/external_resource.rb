@@ -12,10 +12,14 @@ module GraphitiGraphQL
         kind,
         name,
         local_resource_class,
-        foreign_key
+        foreign_key,
+        &blk
       )
         @relationships[name] = ExternalRelationship
           .new(kind, name, local_resource_class, foreign_key)
+        if blk
+          @relationships[name].instance_eval(&blk)
+        end
       end
     end
   end

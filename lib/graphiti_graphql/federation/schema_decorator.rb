@@ -122,7 +122,7 @@ module GraphitiGraphQL
           end
 
           Federation::Loaders::HasMany
-            .for(local_resource, params, relationship.foreign_key)
+            .for(relationship, params)
             .load(object[:id])
         end
       end

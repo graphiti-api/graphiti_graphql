@@ -1,7 +1,7 @@
 module GraphitiGraphQL
   module Federation
     class ExternalRelationship
-      attr_reader :name, :local_resource_class, :foreign_key
+      attr_reader :name, :local_resource_class, :foreign_key, :params_block
 
       def initialize(kind, name, local_resource_class, foreign_key)
         @kind = kind
@@ -16,6 +16,10 @@ module GraphitiGraphQL
 
       def belongs_to?
         @kind == :belongs_to
+      end
+
+      def params(&blk)
+        @params_block = blk
       end
     end
   end
