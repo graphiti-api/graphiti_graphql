@@ -247,6 +247,12 @@ RSpec.describe GraphitiGraphQL::Federation do
       end
     end
 
+    context "when multiple resources reference the same remote type" do
+      xit "still works" do
+        # TODO: it does work, but need to write this test
+      end
+    end
+
     describe "loading" do
       let!(:employee1) do
         PORO::Employee.create \

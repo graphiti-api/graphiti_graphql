@@ -26,14 +26,15 @@ module GraphitiGraphQL
         # Add to Graphiti::Resource config as normal
         # Helpful for inheritance + testing
         def federated_resources
-          config[:federated_resources] ||= {}
+          config[:federated_resources] ||= []
         end
 
         # * Add to the list of external graphql-ruby types we need in schema
         # * Add a readable and filterable FK, without clobbering pre-existing
         def federated_has_many(name, type:, foreign_key: nil, &blk)
           foreign_key ||= :"#{type.underscore}_id"
-          resource = federated_resources[type] ||= ExternalResource.new(type)
+          resource = FederatedResource.new(type)
+          federated_resources << resource
           resource.add_relationship(:has_many, name, self, foreign_key, &blk)
 
           attribute = attributes.find { |name, config|
@@ -66,7 +67,8 @@ module GraphitiGraphQL
         def federated_belongs_to(name, type: nil, foreign_key: nil)
           type ||= name.to_s.camelize
           foreign_key ||= :"#{name.to_s.underscore}_id"
-          resource = federated_resources[type] ||= ExternalResource.new(type)
+          resource = FederatedResource.new(type)
+          federated_resources << resource
           resource.add_relationship(:belongs_to, name, self, foreign_key)
 
           opts = {readable: :gql?, only: [:readable], schema: false}

@@ -1,6 +1,6 @@
 module GraphitiGraphQL
   module Federation
-    class ExternalRelationship
+    class FederatedRelationship
       attr_reader :name, :local_resource_class, :foreign_key, :params_block
 
       def initialize(kind, name, local_resource_class, foreign_key)

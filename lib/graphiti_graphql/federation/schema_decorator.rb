@@ -14,7 +14,7 @@ module GraphitiGraphQL
         # NB if we add mutation support, make sure this is applied after
         @schema.schema.use(GraphQL::Batch)
         add_resolve_reference
-        add_external_resources
+        add_federated_resources
       end
 
       # Add to all local resource types
@@ -36,62 +36,61 @@ module GraphitiGraphQL
         end
       end
 
-      def external_resources
-        {}.tap do |externals|
-          Graphiti.resources.each do |r|
-            externals.merge!(r.config[:federated_resources] || {})
-          end
+      def federated_resources
+        federated = []
+        Graphiti.resources.each do |r|
+          federated |= (r.config[:federated_resources] || [])
         end
+        federated
       end
 
       def type_registry
         @schema.type_registry
       end
 
-      def add_external_resources
-        each_external_resource do |klass, config|
-          # TODO: only do it if field not already defined
-          config.relationships.each_pair do |name, relationship|
+      def add_federated_resources
+        each_federated_resource do |type_class, federated_resource|
+          federated_resource.relationships.each_pair do |name, relationship|
             if relationship.has_many?
-              define_federated_has_many(klass, relationship)
+              define_federated_has_many(type_class, relationship)
             elsif relationship.belongs_to?
-              define_federated_belongs_to(config, relationship)
+              define_federated_belongs_to(federated_resource, relationship)
             end
           end
         end
       end
 
       # NB: test already registered bc 2 things have same relationship
-      def each_external_resource
-        external_resources.each_pair do |klass_name, config|
-          pre_registered = !!type_registry[klass_name]
-          external_klass = if pre_registered
-            type_registry[klass_name][:type]
+      def each_federated_resource
+        federated_resources.each do |federated_resource|
+          pre_registered = !!type_registry[federated_resource.type_name]
+          type_class = if pre_registered
+            type_registry[federated_resource.type_name][:type]
           else
-            add_external_resource_type(klass_name)
+            add_federated_resource_type(federated_resource.type_name)
           end
 
-          yield external_klass, config
+          yield type_class, federated_resource
         end
       end
 
-      def add_external_resource_type(klass_name)
-        external_type = Class.new(@schema.class.base_object)
-        external_type.graphql_name klass_name
-        external_type.key(fields: "id")
-        external_type.extend_type
-        external_type.field :id, String, null: false, external: true
-        external_type.class_eval do
+      def add_federated_resource_type(klass_name)
+        federated_type = Class.new(@schema.class.base_object)
+        federated_type.graphql_name klass_name
+        federated_type.key(fields: "id")
+        federated_type.extend_type
+        federated_type.field :id, String, null: false, external: true
+        federated_type.class_eval do
           def self.resolve_reference(reference, _context, _lookup)
             reference
           end
         end
         # NB must be registered before processing relationships
-        type_registry[klass_name] = {type: external_type}
-        external_type
+        type_registry[klass_name] = {type: federated_type}
+        federated_type
       end
 
-      def define_federated_has_many(external_klass, relationship)
+      def define_federated_has_many(type_class, relationship)
         local_name = GraphitiGraphQL::GraphitiSchema::Resource
           .gql_name(relationship.local_resource_class.name)
         local_type = type_registry[local_name][:type]
@@ -101,14 +100,14 @@ module GraphitiGraphQL
         local_interface = type_registry["I#{local_name}"]
         best_type = local_interface ? local_interface[:type] : local_type
 
-        field = external_klass.field relationship.name,
+        field = type_class.field relationship.name,
           [best_type],
           null: false,
           extras: [:lookahead]
 
         @schema.send :define_arguments_for_sideload_field,
           field, @schema.graphiti_schema.get_resource(local_resource_name)
-        external_klass.define_method relationship.name do |lookahead:, **arguments|
+        type_class.define_method relationship.name do |lookahead:, **arguments|
           # TODO test params...do version of sort with array/symbol keys and plain string
           params = arguments.as_json
             .deep_transform_keys { |key| key.to_s.underscore.to_sym }
@@ -127,7 +126,7 @@ module GraphitiGraphQL
         end
       end
 
-      def define_federated_belongs_to(external_resource_config, relationship)
+      def define_federated_belongs_to(federated_resource, relationship)
         type_name = GraphitiSchema::Resource.gql_name(relationship.local_resource_class.name)
         local_type = type_registry[type_name][:type]
 
@@ -142,7 +141,7 @@ module GraphitiGraphQL
 
         local_types.each do |local|
           local.field relationship.name,
-            type_registry[external_resource_config.type_name][:type], # todo need to define the type?
+            type_registry[federated_resource.type_name][:type],
             null: true
         end
       end

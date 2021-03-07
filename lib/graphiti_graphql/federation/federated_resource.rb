@@ -1,6 +1,6 @@
 module GraphitiGraphQL
   module Federation
-    class ExternalResource
+    class FederatedResource
       attr_reader :type_name, :relationships
 
       def initialize(type_name)
@@ -15,7 +15,7 @@ module GraphitiGraphQL
         foreign_key,
         &blk
       )
-        @relationships[name] = ExternalRelationship
+        @relationships[name] = FederatedRelationship
           .new(kind, name, local_resource_class, foreign_key)
         if blk
           @relationships[name].instance_eval(&blk)
