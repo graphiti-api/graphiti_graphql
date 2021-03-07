@@ -26,6 +26,8 @@ end
 
 For a default Graphiti app, you can now serve GraphQL by POSTing to `/api/v1/gql`.
 
+That's it 🎉!
+
 #### Blending with graphql-ruby
 
 Define your Schema and Type classes as normal. Then in an initializer:
