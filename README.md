@@ -80,6 +80,17 @@ For `has_many` it's a slightly different syntax because we're adding the relatio
 federated_type("Employee").has_many :positions # foreign_key: optional
 ```
 
+Finally, `has_many` accepts the traditional `params` block that works as normal:
+
+```ruby
+federated_type("Employee").has_many :positions do
+  params do |hash|
+    hash[:filter][:active] = true
+    hash[:sort] = "-title"
+  end
+end
+```
+
 Remember that any time you make a change that affects the schema, you will have to bounce your federation gateway. This is how Apollo Federation works when not in "managed" mode.
 
 #### GraphiQL
