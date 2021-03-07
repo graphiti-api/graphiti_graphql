@@ -658,7 +658,24 @@ RSpec.describe GraphitiGraphQL::Federation do
             [employee1.other_position_id, employee2.other_position_id]
           end
 
-          xit "already has foreign key and fields in params" do
+          it "already has foreign key and fields in params" do
+            resource.federated_type("OtherPosition").has_many :employees do
+              params do |hash|
+                hash[:spy] = hash.deep_dup
+              end
+            end
+            schema!([resource])
+            expected = {
+              fields: {employees: "last_name,age,other_position_id,_type"},
+              filter: {
+                other_position_id: {
+                  eq: expected_position_ids.join(",")
+                }
+              }
+            }
+            expect(resource).to receive(:all)
+              .with(hash_including(spy: expected)).and_call_original
+            run
           end
 
           context "when sorting" do
