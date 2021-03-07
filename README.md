@@ -98,7 +98,7 @@ Or pass `type` and/or `foreign_key` to customize:
 federated_belongs_to :employee, type: "MyEmployee", foreign_key: :emp_id
 ```
 
-For `has_many` it's a slightly different syntax because we're adding the relationship to the ***remote** type:
+For `has_many` it's a slightly different syntax because we're adding the relationship to the ***remote*** type:
 
 ```ruby
 federated_type("Employee").has_many :positions # foreign_key: optional
