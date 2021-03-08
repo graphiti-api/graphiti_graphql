@@ -61,7 +61,7 @@ Define your Schema and Type classes as normal. Then in an initializer:
 GraphitiGraphQL.schema_class = MySchema
 ```
 
-Any pre-existing GraphQL endpoint will continue working as normal. But the GQL endpoint you mounted in `config/routes.rb` will now serve BOTH your low-level `graphql-ruby` schema AND your Graphiti-specific schema. Note these cannot (currently) be served side-by-side on under `query` within the *same request*.
+Any pre-existing GraphQL endpoint will continue working as normal. But the GQL endpoint you mounted in `config/routes.rb` will now serve BOTH your low-level `graphql-ruby` schema AND your Graphiti-specific schema. Note these cannot (currently) be served side-by-side under `query` within the *same request*.
 
 By default the GraphQL context will be `Graphiti.context[:object]`, which is the controller being called. You might want to customize this so your existing graphql-ruby code continues to expect the same context:
 
