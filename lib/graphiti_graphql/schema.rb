@@ -251,15 +251,35 @@ module GraphitiGraphQL
     # TODO guarded operators or otherwise whatever eq => nil is
     def generate_filter_attribute_type(type_name, filter_name, filter_config)
       klass = Class.new(GraphQL::Schema::InputObject)
-      klass.graphql_name "#{type_name}Filter#{filter_name.to_s.camelize(:lower)}"
+      filter_graphql_name = "#{type_name}Filter#{filter_name.to_s.camelize(:lower)}"
+      klass.graphql_name(filter_graphql_name)
       filter_config[:operators].each do |operator|
         canonical_graphiti_type = Graphiti::Types
           .name_for(filter_config[:type])
         type = GQL_TYPE_MAP[canonical_graphiti_type]
         required = !!filter_config[:required] && operator == "eq"
+
+        if (allowlist = filter_config[:allow])
+          type = define_allowlist_type(filter_graphql_name, allowlist)
+        end
+
         type = [type] unless !!filter_config[:single]
         klass.argument operator, type, required: required
       end
+      klass
+    end
+
+    def define_allowlist_type(filter_graphql_name, allowlist)
+      name = "#{filter_graphql_name}Allow"
+      if (registered = type_registry[name])
+        return registered[:type]
+      end
+      klass = Class.new(GraphQL::Schema::Enum)
+      klass.graphql_name(name)
+      allowlist.each do |allowed|
+        klass.value(allowed)
+      end
+      register(name, klass)
       klass
     end
 

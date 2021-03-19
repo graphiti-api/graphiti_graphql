@@ -944,6 +944,89 @@ RSpec.describe GraphitiGraphQL do
         end
       end
 
+      context "when filter has allowlist" do
+        before do
+          resource.filter :first_name, allow: ["Agatha"]
+          schema!([resource])
+        end
+
+        it "works via enum" do
+          json = run(%|
+            query {
+              employees(filter: { firstName: { eq: Agatha } }) {
+                nodes {
+                  firstName
+                }
+              }
+            }
+          |)
+          expect(json).to eq({
+            employees: {
+              nodes: [{firstName: "Agatha"}]
+            }
+          })
+        end
+
+        context "and a bad value is passed" do
+          it "returns schema error" do
+            json = run(%|
+              query {
+                employees(filter: { firstName: { eq: "Stephen" } }) {
+                  nodes {
+                    firstName
+                  }
+                }
+              }
+            |)
+            expect(json[:errors][0][:extensions][:code])
+              .to eq("argumentLiteralsIncompatible")
+            expect(json[:errors][0][:message]).to match(/invalid value/)
+          end
+        end
+      end
+
+      context "when filter has denylist" do
+        before do
+          resource.filter :first_name, deny: ["Stephen"]
+          schema!([resource])
+        end
+
+        context "and a good value is passed" do
+          it "works" do
+            json = run(%|
+              query {
+                employees(filter: { firstName: { eq: "Agatha" } }) {
+                  nodes {
+                    firstName
+                  }
+                }
+              }
+            |)
+            expect(json).to eq({
+              employees: {
+                nodes: [{firstName: "Agatha"}]
+              }
+            })
+          end
+        end
+
+        context "and a bad value is passed" do
+          it "returns error" do
+            expect {
+              run(%|
+                query {
+                  employees(filter: { firstName: { eq: "Stephen" } }) {
+                    nodes {
+                      firstName
+                    }
+                  }
+                }
+              |)
+            }.to raise_error(Graphiti::Errors::InvalidFilterValue)
+          end
+        end
+      end
+
       context "when on a relationship" do
         let!(:wrong_employee) do
           PORO::Position.create title: "Wrong",

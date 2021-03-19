@@ -227,7 +227,9 @@ module GraphitiGraphQL
 
               attr_arg.value.arguments.each do |operator_arg|
                 value = operator_arg.value
-                if value.respond_to?(:name) # is a variable
+                if value.is_a?(GraphQL::Language::Nodes::Enum)
+                  value = value.name
+                elsif value.respond_to?(:name) # is a variable
                   value = variable_hash[operator_arg.value.name]
                 end
                 f[filter_param_name] = {operator_arg.name.underscore => value}
