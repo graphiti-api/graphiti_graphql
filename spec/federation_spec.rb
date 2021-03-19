@@ -291,80 +291,136 @@ RSpec.describe GraphitiGraphQL::Federation do
           age: 40
       end
 
-      def execute(instance1, instance2, params = {})
-        batch1 = nil
-        batch2 = nil
-        params[:lookahead] = lookahead unless params.empty?
-        GraphQL::Batch.batch do
-          if params.empty?
-            batch1 = instance1.employees(lookahead: lookahead)
-            batch2 = instance2.employees(lookahead: lookahead)
-          else
-            batch1 = instance1.employees(params)
-            batch2 = instance2.employees(params)
-          end
-        end
-        [batch1.value, batch2.value]
-      end
+      # TODO batch spec - + test dont query for too many fields (perf)
+
+      # def execute(instance1, instance2, params = {})
+      #   batch1 = nil
+      #   batch2 = nil
+      #   params[:lookahead] = lookahead unless params.empty?
+      #   GraphQL::Batch.batch do
+      #     if params.empty?
+      #       batch1 = instance1.employees(lookahead: lookahead)
+      #       batch2 = instance2.employees(lookahead: lookahead)
+      #     else
+      #       batch1 = instance1.employees(params)
+      #       batch2 = instance2.employees(params)
+      #     end
+      #   end
+      #   [batch1.value, batch2.value]
+      # end
 
       describe "basic" do
         it "works" do
           resource.federated_type("OtherPosition").has_many :employees
           schema!([resource])
-          instance1 = type_instance "OtherPosition",
-            {id: employee1.other_position_id.to_s}
-          instance2 = type_instance "OtherPosition",
-            {id: employee2.other_position_id.to_s}
-          batch1, batch2 = execute(instance1, instance2)
-          # extra fields are fine, will be stripped by gql-ruby
-          # We just limit fields to avoid auth issues / improve perf
-          # In fact, we want to ensure the FK comes back so it can
-          # be used in the dataloader
-          expect(batch1).to eq([
-            {
-              id: employee1.id.to_s,
-              _type: "employees",
-              age: 10,
-              last_name: "Z",
-              other_position_id: employee1.other_position_id
-            },
-            {
-              id: employee4.id.to_s,
-              _type: "employees",
-              age: 40,
-              last_name: "W",
-              other_position_id: employee4.other_position_id
+
+          json = run(%(
+            query($representations:[_Any!]!) {
+              _entities(representations:$representations) {
+                ...on OtherPosition {
+                  employees {
+                    nodes {
+                      id
+                      _type
+                      firstName
+                      lastName
+                      age
+                    }
+                  }
+                }
+              }
             }
-          ])
-          expect(batch2).to eq([
-            {
-              id: employee2.id.to_s,
-              _type: "employees",
-              age: 20,
-              last_name: "Y",
-              other_position_id: employee2.other_position_id
-            },
-            {
-              id: employee3.id.to_s,
-              _type: "employees",
-              age: 30,
-              last_name: "X",
-              other_position_id: employee3.other_position_id
-            }
-          ])
+          ), {
+            "representations" => [
+              {
+                "__typename" => "OtherPosition",
+                "id" => employee1.other_position_id.to_s
+              },
+              {
+                "__typename" => "OtherPosition",
+                "id" => employee2.other_position_id.to_s
+              }
+            ]
+          })
+
+          expect(json).to eq({
+            _entities: [
+              {
+                employees: {
+                  nodes: [
+                    {
+                      id: employee1.id.to_s,
+                      _type: "employees",
+                      firstName: "A",
+                      lastName: "Z",
+                      age: 10
+                    },
+                    {
+                      id: employee4.id.to_s,
+                      _type: "employees",
+                      firstName: "D",
+                      lastName: "W",
+                      age: 40
+                    }
+                  ]
+                }
+              },
+              {
+                employees: {
+                  nodes: [
+                    {
+                      id: employee2.id.to_s,
+                      _type: "employees",
+                      firstName: "B",
+                      lastName: "Y",
+                      age: 20
+                    },
+                    {
+                      id: employee3.id.to_s,
+                      _type: "employees",
+                      firstName: "C",
+                      lastName: "X",
+                      age: 30
+                    }
+                  ]
+                }
+              }
+            ]
+          })
         end
 
         it "applies page size 999 so the relationship is not cut off" do
           resource.federated_type("OtherPosition").has_many :employees
           schema!([resource])
-          instance1 = type_instance "OtherPosition",
-            {id: employee1.other_position_id.to_s}
-          instance2 = type_instance "OtherPosition",
-            {id: employee2.other_position_id.to_s}
+
           expect(resource).to receive(:all).with(hash_including({
             page: {size: 999}
           })).and_call_original
-          execute(instance1, instance2)
+
+          run(%(
+            query($representations:[_Any!]!) {
+              _entities(representations:$representations) {
+                ...on OtherPosition {
+                  employees {
+                    nodes {
+                      firstName
+                    }
+                  }
+                }
+              }
+            }
+          ), {
+            "representations" => [
+              {
+                "__typename" => "OtherPosition",
+                "id" => employee1.other_position_id.to_s
+              },
+              {
+                "__typename" => "OtherPosition",
+                "id" => employee2.other_position_id.to_s
+              }
+            ]
+          })
         end
 
         context "when no data" do
@@ -375,13 +431,38 @@ RSpec.describe GraphitiGraphQL::Federation do
           it "returns an empty array" do
             resource.federated_type("OtherPosition").has_many :employees
             schema!([resource])
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_position_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_position_id.to_s}
-            batch1, batch2 = execute(instance1, instance2)
-            expect(batch1).to eq([])
-            expect(batch2).to eq([])
+
+            json = run(%(
+              query($representations:[_Any!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    employees {
+                      nodes {
+                        firstName
+                      }
+                    }
+                  }
+                }
+              }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_position_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee2.other_position_id.to_s
+                }
+              ]
+            })
+
+            expect(json).to eq({
+              _entities: [
+                {employees: {nodes: []}},
+                {employees: {nodes: []}}
+              ]
+            })
           end
         end
 
@@ -395,33 +476,60 @@ RSpec.describe GraphitiGraphQL::Federation do
             end
 
             context "and the field was requested" do
-              let(:lookahead_selections) { ["first_name", "salary", "age"] }
-
               it "raises error" do
                 resource.federated_type("OtherPosition").has_many :employees
                 schema!([resource])
-                instance1 = type_instance "OtherPosition",
-                  {id: employee1.other_position_id.to_s}
-                instance2 = type_instance "OtherPosition",
-                  {id: employee2.other_position_id.to_s}
+
                 expect {
-                  execute(instance1, instance2)
+                  run(%(
+                    query($representations:[_Any!]!) {
+                      _entities(representations:$representations) {
+                        ...on OtherPosition {
+                          employees {
+                            nodes {
+                              salary
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ), {
+                    "representations" => [
+                      {
+                        "__typename" => "OtherPosition",
+                        "id" => employee1.other_position_id.to_s
+                      }
+                    ]
+                  })
                 }.to raise_error(Graphiti::Errors::UnreadableAttribute, /salary/)
               end
             end
 
             context "and the field was not requested" do
-              let(:lookahead_selections) { ["first_name", "age"] }
-
               it "works as normal" do
                 resource.federated_type("OtherPosition").has_many :employees
                 schema!([resource])
-                instance1 = type_instance "OtherPosition",
-                  {id: employee1.other_position_id.to_s}
-                instance2 = type_instance "OtherPosition",
-                  {id: employee2.other_position_id.to_s}
                 expect {
-                  execute(instance1, instance2)
+                  run(%(
+                    query($representations:[_Any!]!) {
+                      _entities(representations:$representations) {
+                        ...on OtherPosition {
+                          employees {
+                            nodes {
+                              firstName
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ), {
+                    "representations" => [
+                      {
+                        "__typename" => "OtherPosition",
+                        "id" => employee1.other_position_id.to_s
+                      }
+                    ]
+                  })
                 }.to_not raise_error
               end
             end
@@ -436,18 +544,43 @@ RSpec.describe GraphitiGraphQL::Federation do
             end
 
             context "and the field was requested" do
-              let(:lookahead_selections) { ["first_name", "salary", "age"] }
-
               it "works as normal" do
                 resource.federated_type("OtherPosition").has_many :employees
                 schema!([resource])
-                instance1 = type_instance "OtherPosition",
-                  {id: employee1.other_position_id.to_s}
-                instance2 = type_instance "OtherPosition",
-                  {id: employee2.other_position_id.to_s}
-                batch1, batch2 = execute(instance1, instance2)
-                expect(batch1.map { |r| r[:salary] }).to eq([100_000, 100_000])
-                expect(batch2.map { |r| r[:salary] }).to eq([100_000, 100_000])
+
+                json = run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees {
+                          nodes {
+                            salary
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    },
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee2.other_position_id.to_s
+                    }
+                  ]
+                })
+
+                entities = json[:_entities]
+                nodes = entities.map { |e| e[:employees][:nodes] }.flatten
+                expect(nodes.map { |n| n[:salary] }).to eq([
+                  100_000,
+                  100_000,
+                  100_000,
+                  100_000
+                ])
               end
             end
           end
@@ -463,13 +596,39 @@ RSpec.describe GraphitiGraphQL::Federation do
           end
 
           it "is honored" do
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_position_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_position_id.to_s}
-            batch1, batch2 = execute(instance1, instance2)
-            expect(batch1.map { |r| r[:last_name] }).to eq(["FOO", "FOO"])
-            expect(batch2.map { |r| r[:last_name] }).to eq(["FOO", "FOO"])
+            json = run(%(
+              query($representations:[_Any!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    employees {
+                      nodes {
+                        lastName
+                      }
+                    }
+                  }
+                }
+              }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_position_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee2.other_position_id.to_s
+                }
+              ]
+            })
+
+            entities = json[:_entities]
+            nodes = entities.map { |e| e[:employees][:nodes] }.flatten
+            expect(nodes).to eq([
+              {lastName: "FOO"},
+              {lastName: "FOO"},
+              {lastName: "FOO"},
+              {lastName: "FOO"}
+            ])
           end
         end
 
@@ -481,22 +640,41 @@ RSpec.describe GraphitiGraphQL::Federation do
           end
 
           it "still works" do
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_position_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_position_id.to_s}
+            json = run(%(
+              query($representations:[_Any!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    exemplaryEmployees {
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_position_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee2.other_position_id.to_s
+                }
+              ]
+            })
 
-            batch1 = nil
-            batch2 = nil
-            GraphQL::Batch.batch do
-              batch1 = instance1.exemplary_employees(lookahead: lookahead)
-              batch2 = instance2.exemplary_employees(lookahead: lookahead)
-            end
-
-            expect(batch1.value.map { |r| r[:id] })
-              .to eq([employee1.id.to_s, employee4.id.to_s])
-            expect(batch2.value.map { |r| r[:id] })
-              .to eq([employee2.id.to_s, employee3.id.to_s])
+            entities = json[:_entities]
+            nodes = entities.map { |e| e[:exemplaryEmployees][:nodes] }
+            expect(nodes[0]).to eq([
+              {id: employee1.id.to_s},
+              {id: employee4.id.to_s}
+            ])
+            expect(nodes[1]).to eq([
+              {id: employee2.id.to_s},
+              {id: employee3.id.to_s}
+            ])
           end
         end
 
@@ -505,15 +683,41 @@ RSpec.describe GraphitiGraphQL::Federation do
             resource.federated_type("OtherPosition").has_many :employees,
               foreign_key: :other_pos_id
             schema!([resource])
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_pos_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_pos_id.to_s}
-            batch1, batch2 = execute(instance1, instance2)
-            expect(batch1.map { |r| r[:id] })
-              .to eq([employee1.id.to_s, employee3.id.to_s])
-            expect(batch2.map { |r| r[:id] })
-              .to eq([employee2.id.to_s, employee4.id.to_s])
+
+            json = run(%(
+              query($representations:[_Any!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    employees {
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_pos_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee2.other_pos_id.to_s
+                }
+              ]
+            })
+            entities = json[:_entities]
+            nodes = entities.map { |e| e[:employees][:nodes] }
+            expect(nodes[0]).to eq([
+              {id: employee1.id.to_s},
+              {id: employee3.id.to_s}
+            ])
+            expect(nodes[1]).to eq([
+              {id: employee2.id.to_s},
+              {id: employee4.id.to_s}
+            ])
           end
         end
 
@@ -534,15 +738,42 @@ RSpec.describe GraphitiGraphQL::Federation do
 
           it "works by referencing the serialized value" do
             schema!([resource])
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_pos_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_pos_id.to_s}
-            batch1, batch2 = execute(instance1, instance2)
-            expect(batch1.map { |r| r[:id] })
-              .to eq([employee1.id.to_s, employee3.id.to_s])
-            expect(batch2.map { |r| r[:id] })
-              .to eq([employee2.id.to_s, employee4.id.to_s])
+
+            json = run(%(
+              query($representations:[_Any!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    employees {
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_pos_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee2.other_pos_id.to_s
+                }
+              ]
+            })
+
+            entities = json[:_entities]
+            nodes = entities.map { |e| e[:employees][:nodes] }
+            expect(nodes[0]).to eq([
+              {id: employee1.id.to_s},
+              {id: employee3.id.to_s}
+            ])
+            expect(nodes[1]).to eq([
+              {id: employee2.id.to_s},
+              {id: employee4.id.to_s}
+            ])
           end
 
           context "and is an integer" do
@@ -562,15 +793,42 @@ RSpec.describe GraphitiGraphQL::Federation do
 
             it "works by casting to a string" do
               schema!([resource])
-              instance1 = type_instance "OtherPosition",
-                {id: employee1.other_pos_id.to_s}
-              instance2 = type_instance "OtherPosition",
-                {id: employee2.other_pos_id.to_s}
-              batch1, batch2 = execute(instance1, instance2)
-              expect(batch1.map { |r| r[:id] })
-                .to eq([employee1.id.to_s, employee3.id.to_s])
-              expect(batch2.map { |r| r[:id] })
-                .to eq([employee2.id.to_s, employee4.id.to_s])
+
+              json = run(%(
+                query($representations:[_Any!]!) {
+                  _entities(representations:$representations) {
+                    ...on OtherPosition {
+                      employees {
+                        nodes {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              ), {
+                "representations" => [
+                  {
+                    "__typename" => "OtherPosition",
+                    "id" => employee1.other_pos_id.to_s
+                  },
+                  {
+                    "__typename" => "OtherPosition",
+                    "id" => employee2.other_pos_id.to_s
+                  }
+                ]
+              })
+
+              entities = json[:_entities]
+              nodes = entities.map { |e| e[:employees][:nodes] }
+              expect(nodes[0]).to eq([
+                {id: employee1.id.to_s},
+                {id: employee3.id.to_s}
+              ])
+              expect(nodes[1]).to eq([
+                {id: employee2.id.to_s},
+                {id: employee4.id.to_s}
+              ])
             end
           end
         end
@@ -579,17 +837,40 @@ RSpec.describe GraphitiGraphQL::Federation do
           it "works" do
             resource.federated_type("OtherPosition").has_many :employees
             schema!([resource])
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_position_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_position_id.to_s}
-            batch1, batch2 = execute(instance1, instance2, {
-              filter: {
-                firstName: {eq: [employee1.first_name, employee3.first_name]}
+
+            json = run(%(
+              query($representations:[_Any!]!, $names: [String!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    employees(filter: {firstName: { eq: $names } }) {
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                }
               }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_position_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee2.other_position_id.to_s
+                }
+              ],
+              "names" => [
+                employee1.first_name,
+                employee3.first_name
+              ]
             })
-            expect(batch1.map { |r| r[:id] }).to eq([employee1.id.to_s])
-            expect(batch2.map { |r| r[:id] }).to eq([employee3.id.to_s])
+
+            entities = json[:_entities]
+            nodes = entities.map { |e| e[:employees][:nodes] }
+            expect(nodes[0]).to eq([{id: employee1.id.to_s}])
+            expect(nodes[1]).to eq([{id: employee3.id.to_s}])
           end
         end
 
@@ -597,17 +878,42 @@ RSpec.describe GraphitiGraphQL::Federation do
           it "works" do
             resource.federated_type("OtherPosition").has_many :employees
             schema!([resource])
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_position_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_position_id.to_s}
-            batch1, batch2 = execute(instance1, instance2, {
-              sort: [{att: "firstName", dir: "desc"}]
+
+            json = run(%(
+              query($representations:[_Any!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    employees(sort: [{ att: firstName, dir: desc }]) {
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_position_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee3.other_position_id.to_s
+                }
+              ]
             })
-            expect(batch1.map { |r| r[:id] })
-              .to eq([employee4.id.to_s, employee1.id.to_s])
-            expect(batch2.map { |r| r[:id] })
-              .to eq([employee3.id.to_s, employee2.id.to_s])
+
+            entities = json[:_entities]
+            nodes = entities.map { |e| e[:employees][:nodes] }
+            expect(nodes[0]).to eq([
+              {id: employee4.id.to_s},
+              {id: employee1.id.to_s}
+            ])
+            expect(nodes[1]).to eq([
+              {id: employee3.id.to_s},
+              {id: employee2.id.to_s}
+            ])
           end
         end
 
@@ -616,15 +922,31 @@ RSpec.describe GraphitiGraphQL::Federation do
             it "works" do
               resource.federated_type("OtherPosition").has_many :employees
               schema!([resource])
-              instance = type_instance "OtherPosition",
-                {id: employee1.other_position_id.to_s}
-              batch = GraphQL::Batch.batch {
-                instance.employees({
-                  page: {size: 1, number: 2},
-                  lookahead: lookahead
-                })
-              }
-              expect(batch.map { |r| r[:id] }).to eq([employee4.id.to_s])
+
+              json = run(%(
+                query($representations:[_Any!]!) {
+                  _entities(representations:$representations) {
+                    ...on OtherPosition {
+                      employees(page: { size: 1, number: 2 }) {
+                        nodes {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              ), {
+                "representations" => [
+                  {
+                    "__typename" => "OtherPosition",
+                    "id" => employee1.other_position_id.to_s
+                  }
+                ]
+              })
+
+              entities = json[:_entities]
+              nodes = entities.map { |e| e[:employees][:nodes] }
+              expect(nodes[0]).to eq([{id: employee4.id.to_s}])
             end
           end
 
@@ -632,13 +954,31 @@ RSpec.describe GraphitiGraphQL::Federation do
             it "works" do
               resource.federated_type("OtherPosition").has_many :employees
               schema!([resource])
-              instance1 = type_instance "OtherPosition",
-                {id: employee1.other_position_id.to_s}
-              instance2 = type_instance "OtherPosition",
-                {id: employee2.other_position_id.to_s}
+
               expect {
-                execute(instance1, instance2, {
-                  page: {size: 1}
+                run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees(page: { size: 1, number: 2 }) {
+                          nodes {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    },
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee3.other_position_id.to_s
+                    }
+                  ]
                 })
               }.to raise_error(Graphiti::Errors::UnsupportedPagination)
             end
@@ -646,12 +986,32 @@ RSpec.describe GraphitiGraphQL::Federation do
         end
 
         context "when customizing with params block" do
-          def run(params = {})
-            instance1 = type_instance "OtherPosition",
-              {id: employee1.other_position_id.to_s}
-            instance2 = type_instance "OtherPosition",
-              {id: employee2.other_position_id.to_s}
-            execute(instance1, instance2, params)
+          def perform(params = {})
+            run(%(
+              query($representations:[_Any!]!) {
+                _entities(representations:$representations) {
+                  ...on OtherPosition {
+                    employees {
+                      nodes {
+                        lastName
+                        age
+                      }
+                    }
+                  }
+                }
+              }
+            ), {
+              "representations" => [
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee1.other_position_id.to_s
+                },
+                {
+                  "__typename" => "OtherPosition",
+                  "id" => employee3.other_position_id.to_s
+                }
+              ]
+            })
           end
 
           def expected_position_ids
@@ -675,7 +1035,7 @@ RSpec.describe GraphitiGraphQL::Federation do
             }
             expect(resource).to receive(:all)
               .with(hash_including(spy: expected)).and_call_original
-            run
+            perform
           end
 
           context "when sorting" do
@@ -699,11 +1059,11 @@ RSpec.describe GraphitiGraphQL::Federation do
                   sort: "-age"
                 ))
                 .and_call_original
-              batch1, batch2 = run
-              expect(batch1.map { |r| r[:id].to_i })
-                .to eq([employee4.id, employee1.id])
-              expect(batch2.map { |r| r[:id].to_i })
-                .to eq([employee3.id, employee2.id])
+              json = perform
+              entities = json[:_entities]
+              nodes = entities.map { |e| e[:employees][:nodes] }
+              expect(nodes[0].map { |n| n[:age] }).to eq([40, 10])
+              expect(nodes[1].map { |n| n[:age] }).to eq([30, 20])
             end
 
             context "and also given runtime sort" do
@@ -718,11 +1078,37 @@ RSpec.describe GraphitiGraphQL::Federation do
                     sort: "-age"
                   ))
                   .and_call_original
-                batch1, batch2 = run(sort: "id")
-                expect(batch1.map { |r| r[:id].to_i })
-                  .to eq([employee4.id, employee1.id])
-                expect(batch2.map { |r| r[:id].to_i })
-                  .to eq([employee3.id, employee2.id])
+
+                json = run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees(sort: [{ att: id, dir: asc }]) {
+                          nodes {
+                            lastName
+                            age
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    },
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee3.other_position_id.to_s
+                    }
+                  ]
+                })
+
+                entities = json[:_entities]
+                nodes = entities.map { |e| e[:employees][:nodes] }
+                expect(nodes[0].map { |n| n[:age]}).to eq([40, 10])
+                expect(nodes[1].map { |n| n[:age]}).to eq([30, 20])
               end
             end
 
@@ -732,7 +1118,7 @@ RSpec.describe GraphitiGraphQL::Federation do
                   .with(hash_including({
                     filter: {
                       age: {
-                        eq: 20
+                        eq: [20]
                       },
                       other_position_id: {
                         eq: expected_position_ids.join(",")
@@ -740,11 +1126,37 @@ RSpec.describe GraphitiGraphQL::Federation do
                     }
                   }))
                   .and_call_original
-                batch1, batch2 = run(filter: {age: {eq: 20}})
-                expect(batch1.map { |r| r[:id].to_i })
-                  .to eq([])
-                expect(batch2.map { |r| r[:id].to_i })
-                  .to eq([employee2.id])
+
+                json = run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees(filter: { age: { eq: 20 } }) {
+                          nodes {
+                            lastName
+                            age
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    },
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee3.other_position_id.to_s
+                    }
+                  ]
+                })
+
+                entities = json[:_entities]
+                nodes = entities.map { |e| e[:employees][:nodes] }
+                expect(nodes[0]).to eq([])
+                expect(nodes[1].map { |n| n[:age] }).to eq([20])
               end
             end
           end
@@ -770,11 +1182,37 @@ RSpec.describe GraphitiGraphQL::Federation do
                   },
                 ))
                 .and_call_original
-              batch1, batch2 = run
-              expect(batch1.map { |r| r[:id].to_i })
-                .to eq([employee1.id, employee4.id])
-              expect(batch2.map { |r| r[:id].to_i })
-                .to eq([employee2.id])
+
+              json = run(%(
+                query($representations:[_Any!]!) {
+                  _entities(representations:$representations) {
+                    ...on OtherPosition {
+                      employees(filter: { age: { eq: [10, 20, 40] } }) {
+                        nodes {
+                          lastName
+                          age
+                        }
+                      }
+                    }
+                  }
+                }
+              ), {
+                "representations" => [
+                  {
+                    "__typename" => "OtherPosition",
+                    "id" => employee1.other_position_id.to_s
+                  },
+                  {
+                    "__typename" => "OtherPosition",
+                    "id" => employee3.other_position_id.to_s
+                  }
+                ]
+              })
+
+              entities = json[:_entities]
+              nodes = entities.map { |e| e[:employees][:nodes] }
+              expect(nodes[0].map { |n| n[:age] }).to eq([10, 40])
+              expect(nodes[1].map { |n| n[:age] }).to eq([20])
             end
 
             context "and also given runtime sort" do
@@ -790,11 +1228,37 @@ RSpec.describe GraphitiGraphQL::Federation do
                     sort: "-age"
                   ))
                   .and_call_original
-                batch1, batch2 = run(sort: "-age")
-                expect(batch1.map { |r| r[:id].to_i })
-                  .to eq([employee4.id, employee1.id])
-                expect(batch2.map { |r| r[:id].to_i })
-                  .to eq([employee2.id])
+
+                json = run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees(sort: [{ att: age, dir: desc }]) {
+                          nodes {
+                            lastName
+                            age
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    },
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee3.other_position_id.to_s
+                    }
+                  ]
+                })
+
+                entities = json[:_entities]
+                nodes = entities.map { |e| e[:employees][:nodes] }
+                expect(nodes[0].map { |n| n[:age] }).to eq([40, 10])
+                expect(nodes[1].map { |n| n[:age] }).to eq([20])
               end
             end
 
@@ -807,15 +1271,41 @@ RSpec.describe GraphitiGraphQL::Federation do
                         other_position_id: {
                           eq: expected_position_ids.join(",")
                         },
-                        age: {eq: [10,20,40]}
+                        age: {eq: [10, 20, 40]}
                       },
                     ))
                     .and_call_original
-                  batch1, batch2 = run(filter: {age: {eq: 10}})
-                  expect(batch1.map { |r| r[:id].to_i })
-                    .to eq([employee1.id, employee4.id])
-                  expect(batch2.map { |r| r[:id].to_i })
-                    .to eq([employee2.id])
+
+                  json = run(%(
+                    query($representations:[_Any!]!) {
+                      _entities(representations:$representations) {
+                        ...on OtherPosition {
+                          employees(filter: { age: { eq: 30 } }) {
+                            nodes {
+                              lastName
+                              age
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ), {
+                    "representations" => [
+                      {
+                        "__typename" => "OtherPosition",
+                        "id" => employee1.other_position_id.to_s
+                      },
+                      {
+                        "__typename" => "OtherPosition",
+                        "id" => employee3.other_position_id.to_s
+                      }
+                    ]
+                  })
+
+                  entities = json[:_entities]
+                  nodes = entities.map { |e| e[:employees][:nodes] }
+                  expect(nodes[0].map { |n| n[:age] }).to eq([10, 40])
+                  expect(nodes[1].map { |n| n[:age] }).to eq([20])
                 end
               end
 
@@ -827,18 +1317,42 @@ RSpec.describe GraphitiGraphQL::Federation do
                         other_position_id: {
                           eq: expected_position_ids.join(",")
                         },
-                        age: {eq: [10,20,40]},
+                        age: {eq: [10, 20, 40]},
                         id: {eq: [employee4.id, employee2.id]}
-                      },
+                      }
                     ))
                     .and_call_original
-                  batch1, batch2 = run({
-                    filter: {id: {eq: [employee4.id, employee2.id]}}
+
+                  json = run(%(
+                    query($representations:[_Any!]!) {
+                      _entities(representations:$representations) {
+                        ...on OtherPosition {
+                          employees(filter: { id: { eq: [#{employee4.id}, #{employee2.id}] } }) {
+                            nodes {
+                              lastName
+                              age
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ), {
+                    "representations" => [
+                      {
+                        "__typename" => "OtherPosition",
+                        "id" => employee1.other_position_id.to_s
+                      },
+                      {
+                        "__typename" => "OtherPosition",
+                        "id" => employee3.other_position_id.to_s
+                      }
+                    ]
                   })
-                  expect(batch1.map { |r| r[:id].to_i })
-                    .to eq([employee4.id])
-                  expect(batch2.map { |r| r[:id].to_i })
-                    .to eq([employee2.id])
+
+                  entities = json[:_entities]
+                  nodes = entities.map { |e| e[:employees][:nodes] }
+                  expect(nodes[0].map { |n| n[:age] }).to eq([40])
+                  expect(nodes[1].map { |n| n[:age] }).to eq([20])
                 end
               end
             end
@@ -848,7 +1362,7 @@ RSpec.describe GraphitiGraphQL::Federation do
             before do
               resource.federated_type("OtherPosition").has_many :employees do
                 params do |hash|
-                  hash[:page] = { size: 1 }
+                  hash[:page] = {size: 1}
                 end
               end
               schema!([resource])
@@ -866,14 +1380,30 @@ RSpec.describe GraphitiGraphQL::Federation do
                 ))
                 .and_call_original
 
-              instance = type_instance "OtherPosition",
-                {id: employee1.other_position_id.to_s}
-              batch = GraphQL::Batch.batch do
-                instance.employees(lookahead: lookahead)
-              end
+              json = run(%(
+                query($representations:[_Any!]!) {
+                  _entities(representations:$representations) {
+                    ...on OtherPosition {
+                      employees {
+                        nodes {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              ), {
+                "representations" => [
+                  {
+                    "__typename" => "OtherPosition",
+                    "id" => employee1.other_position_id.to_s
+                  }
+                ]
+              })
 
-              expect(batch.map { |r| r[:id].to_i })
-                .to eq([employee1.id])
+              entities = json[:_entities]
+              nodes = entities.map { |e| e[:employees][:nodes] }
+              expect(nodes).to eq([[{id: employee1.id.to_s}]])
             end
           end
         end
@@ -959,30 +1489,51 @@ RSpec.describe GraphitiGraphQL::Federation do
       end
 
       it "can load" do
-        instance = type_instance "Employee",
-          {id: visa.employee_id.to_s}
-        batch = GraphQL::Batch.batch {
-          instance.credit_cards(lookahead: lookahead)
-        }
-        # NB ensure type and __typename are returned correctly
-        expect(batch).to eq([
+        json = run(%(
+          query($representations:[_Any!]!) {
+            _entities(representations:$representations) {
+              ...on Employee {
+                creditCards {
+                  nodes {
+                    __typename
+                    _type
+                    id
+                  }
+                }
+              }
+            }
+          }
+        ), {
+          "representations" => [
+            {
+              "__typename" => "Employee",
+              "id" => visa.employee_id.to_s
+            }
+          ]
+        })
+
+        entities = json[:_entities]
+        expect(entities).to eq([
           {
-            id: "1",
-            _type: "visas",
-            __typename: "POROFederatedVisa",
-            employee_id: 1
-          },
-          {
-            id: "2",
-            _type: "gold_visas",
-            __typename: "POROFederatedGoldVisa",
-            employee_id: 1
-          },
-          {
-            id: "3",
-            _type: "mastercards",
-            __typename: "POROFederatedMastercard",
-            employee_id: 1
+            creditCards: {
+              nodes: [
+                {
+                  __typename: "POROFederatedVisa",
+                  _type: "visas",
+                  id: "1"
+                },
+                {
+                  __typename: "POROFederatedGoldVisa",
+                  _type: "gold_visas",
+                  id: "2"
+                },
+                {
+                  __typename: "POROFederatedMastercard",
+                  _type: "mastercards",
+                  id: "3"
+                }
+              ]
+            }
           }
         ])
       end
@@ -1015,20 +1566,24 @@ RSpec.describe GraphitiGraphQL::Federation do
       json = run(%(
         query {
           positions {
-            otherEmp {
-              __typename
-              id
+            nodes {
+              otherEmp {
+                __typename
+                id
+              }
             }
           }
         }
       ))
       expect(json).to eq({
-        positions: [{
-          otherEmp: {
-            __typename: "OtherEmp",
-            id: position.other_emp_id.to_s
-          }
-        }]
+        positions: {
+          nodes: [{
+            otherEmp: {
+              __typename: "OtherEmp",
+              id: position.other_emp_id.to_s
+            }
+          }]
+        }
       })
     end
 
@@ -1039,14 +1594,16 @@ RSpec.describe GraphitiGraphQL::Federation do
       json = run(%(
         query {
           positions {
-            otherEmp {
-              __typename
-              id
+            nodes {
+              otherEmp {
+                __typename
+                id
+              }
             }
           }
         }
       ))
-      expect(json).to eq({positions: [{}]})
+      expect(json).to eq({positions: {nodes: [{}]}})
     end
 
     it "defines the external type correctly" do
@@ -1069,20 +1626,24 @@ RSpec.describe GraphitiGraphQL::Federation do
         json = run(%(
           query {
             positions {
-              otherEmp {
-                __typename
-                id
+              nodes {
+                otherEmp {
+                  __typename
+                  id
+                }
               }
             }
           }
         ))
         expect(json).to eq({
-          positions: [{
-            otherEmp: {
-              __typename: "OtherEmp",
-              id: "9876"
-            }
-          }]
+          positions: {
+            nodes: [{
+              otherEmp: {
+                __typename: "OtherEmp",
+                id: "9876"
+              }
+            }]
+          }
         })
       end
 
@@ -1099,20 +1660,24 @@ RSpec.describe GraphitiGraphQL::Federation do
           json = run(%(
             query {
               positions {
-                otherEmp {
-                  __typename
-                  id
+                nodes {
+                  otherEmp {
+                    __typename
+                    id
+                  }
                 }
               }
             }
           ))
           expect(json).to eq({
-            positions: [{
-              otherEmp: {
-                __typename: "OtherEmp",
-                id: "10000"
-              }
-            }]
+            positions: {
+              nodes: [{
+                otherEmp: {
+                  __typename: "OtherEmp",
+                  id: "10000"
+                }
+              }]
+            }
           })
         end
 
@@ -1128,20 +1693,24 @@ RSpec.describe GraphitiGraphQL::Federation do
             json = run(%(
               query {
                 positions {
-                  otherEmp {
-                    __typename
-                    id
+                  nodes {
+                    otherEmp {
+                      __typename
+                      id
+                    }
                   }
                 }
               }
             ))
             expect(json).to eq({
-              positions: [{
-                otherEmp: {
-                  __typename: "OtherEmp",
-                  id: "10000"
-                }
-              }]
+              positions: {
+                nodes: [{
+                  otherEmp: {
+                    __typename: "OtherEmp",
+                    id: "10000"
+                  }
+                }]
+              }
             })
           end
         end
@@ -1159,20 +1728,24 @@ RSpec.describe GraphitiGraphQL::Federation do
         json = run(%(
           query {
             positions {
-              otherEmp {
-                __typename
-                id
+              nodes {
+                otherEmp {
+                  __typename
+                  id
+                }
               }
             }
           }
         ))
         expect(json).to eq({
-          positions: [{
-            otherEmp: {
-              __typename: "OtherType",
-              id: position.other_emp_id.to_s
-            }
-          }]
+          positions: {
+            nodes: [{
+              otherEmp: {
+                __typename: "OtherType",
+                id: position.other_emp_id.to_s
+              }
+            }]
+          }
         })
       end
     end
@@ -1188,17 +1761,21 @@ RSpec.describe GraphitiGraphQL::Federation do
         json = run(%(
           query {
             positions {
-              otherEmp {
-                __typename
-                id
+              nodes {
+                otherEmp {
+                  __typename
+                  id
+                }
               }
             }
           }
         ))
         expect(json).to eq({
-          positions: [{
-            otherEmp: {__typename: "OtherEmp", id: position.other_emp_id.to_s}
-          }]
+          positions: {
+            nodes: [{
+              otherEmp: {__typename: "OtherEmp", id: position.other_emp_id.to_s}
+            }]
+          }
         })
       end
     end

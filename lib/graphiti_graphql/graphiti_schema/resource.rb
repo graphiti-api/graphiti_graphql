@@ -63,6 +63,10 @@ module GraphitiGraphQL
         config[:name]
       end
 
+      def stats
+        config[:stats]
+      end
+
       def type
         config[:type]
       end

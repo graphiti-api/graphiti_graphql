@@ -339,15 +339,16 @@ module PORO
 
     # No need for actual logic to fire
     def count(scope, attr)
-      "poro_count_#{attr}"
+      DB.all(scope.except(:page, :per)).length
     end
 
     def sum(scope, attr)
-      "poro_sum_#{attr}"
+      records = DB.all(scope.except(:page, :per))
+      records.map { |r| r.send(attr) }.sum
     end
 
     def average(scope, attr)
-      "poro_average_#{attr}"
+      sum(scope, attr) / count(scope, attr)
     end
 
     def maximum(scope, attr)

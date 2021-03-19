@@ -40,7 +40,7 @@ RSpec.describe GraphitiGraphQL::Schema do
         klass = Class.new(GraphQL::Schema)
         klass.query(query_type)
         klass.orphan_types([orphan_type])
-        klass.max_depth(2)
+        klass.max_depth(3)
         klass
       end
 
@@ -94,12 +94,14 @@ RSpec.describe GraphitiGraphQL::Schema do
         json = run(%(
           query {
             employees {
-              firstName
+              nodes {
+                firstName
+              }
             }
           }
         ))
         expect(json).to eq({
-          employees: [{firstName: "Jenny"}]
+          employees: {nodes: [{firstName: "Jenny"}]}
         })
       end
 
@@ -107,9 +109,13 @@ RSpec.describe GraphitiGraphQL::Schema do
         json = run(%(
           query {
             employees {
-              positions {
-                department {
-                  name
+              nodes {
+                positions {
+                  nodes {
+                    department {
+                      name
+                    }
+                  }
                 }
               }
             }
@@ -117,7 +123,7 @@ RSpec.describe GraphitiGraphQL::Schema do
         ))
         expect(json).to eq({
           errors: [{
-            message: "Query has depth of 4, which exceeds max depth of 2"
+            message: "Query has depth of 6, which exceeds max depth of 3"
           }]
         })
       end

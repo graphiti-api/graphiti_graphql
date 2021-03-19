@@ -22,7 +22,7 @@ RSpec.describe GraphitiGraphQL do
       context "via hardcoding" do
         it "works" do
           json = run(%|
-            query getEmployee {
+            query {
               employee(id: "2") {
                 firstName
               }
@@ -55,7 +55,7 @@ RSpec.describe GraphitiGraphQL do
 
       it "can be null" do
         json = run(%|
-          query getEmployee {
+          query {
             employee(id: "999") {
               firstName
             }
@@ -68,7 +68,7 @@ RSpec.describe GraphitiGraphQL do
 
       it "does not support filtering" do
         json = run(%|
-          query getEmployee {
+          query {
             employee(id: "2", filterFirstNameEq: "Agatha") {
               firstName
             }
@@ -80,7 +80,7 @@ RSpec.describe GraphitiGraphQL do
 
       it "does not support sorting" do
         json = run(%|
-          query getEmployee {
+          query {
             employee(id: "2", sort: [{ att: firstName, dir: desc }]) {
               firstName
             }
@@ -92,7 +92,7 @@ RSpec.describe GraphitiGraphQL do
 
       it "does not support pagination" do
         json = run(%|
-          query getEmployee {
+          query {
             employee(id: "2", page: { size: 1, number: 2 }) {
               firstName
             }
@@ -145,15 +145,19 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             exemplaryEmployees {
-              firstName
+              nodes {
+                firstName
+              }
             }
           }
         ))
         expect(json).to eq({
-          exemplaryEmployees: [
-            {firstName: "Stephen"},
-            {firstName: "Agatha"}
-          ]
+          exemplaryEmployees: {
+            nodes: [
+              {firstName: "Stephen"},
+              {firstName: "Agatha"}
+            ]
+          }
         })
       end
 
@@ -161,7 +165,9 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             employees {
-              firstName
+              nodes {
+                firstName
+              }
             }
           }
         ))
@@ -187,17 +193,31 @@ RSpec.describe GraphitiGraphQL do
           json = run(%(
             query {
               employees {
-                positions {
-                  title
+                nodes {
+                  positions {
+                    nodes {
+                      title
+                    }
+                  }
                 }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {positions: [{title: "postitle"}]},
-              {positions: []}
-            ]
+            employees: {
+              nodes: [
+                {
+                  positions: {
+                    nodes: [{title: "postitle"}]
+                  }
+                },
+                {
+                  positions: {
+                    nodes: []
+                  }
+                }
+              ]
+            }
           })
         end
       end
@@ -207,24 +227,28 @@ RSpec.describe GraphitiGraphQL do
       describe "basic" do
         it "works, does not render id automatically, camelizes keys" do
           json = run(%(
-            query getEmployees {
+            query {
               employees {
-                firstName
-                lastName
+                nodes {
+                  firstName
+                  lastName
+                }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {
-                firstName: "Stephen",
-                lastName: "King"
-              },
-              {
-                firstName: "Agatha",
-                lastName: "Christie"
-              }
-            ]
+            employees: {
+              nodes: [
+                {
+                  firstName: "Stephen",
+                  lastName: "King"
+                },
+                {
+                  firstName: "Agatha",
+                  lastName: "Christie"
+                }
+              ]
+            }
           })
         end
 
@@ -232,60 +256,64 @@ RSpec.describe GraphitiGraphQL do
           now = Time.now
           allow(Time).to receive(:now) { now }
           json = run(%(
-            query getEmployees {
+            query {
               employees {
-                id
-                firstName
-                active
-                age
-                change
-                createdAt
-                today
-                objekt
-                stringies
-                ints
-                floats
-                datetimes
-                scalarArray
-                objectArray
+                nodes {
+                  id
+                  firstName
+                  active
+                  age
+                  change
+                  createdAt
+                  today
+                  objekt
+                  stringies
+                  ints
+                  floats
+                  datetimes
+                  scalarArray
+                  objectArray
+                }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {
-                active: true,
-                age: 60,
-                change: 0.76,
-                createdAt: now.iso8601,
-                today: now.to_date,
-                firstName: "Stephen",
-                id: "1",
-                objekt: {foo: "bar"},
-                stringies: ["foo", "bar"],
-                ints: [1, 2],
-                floats: [0.01, 0.02],
-                datetimes: [now.iso8601, now.iso8601],
-                scalarArray: [1, 2],
-                objectArray: [{foo: "bar"}, {baz: "bazoo"}]
-              },
-              {
-                active: true,
-                age: 70,
-                change: 0.76,
-                createdAt: now.iso8601,
-                today: now.to_date,
-                firstName: "Agatha",
-                id: "2",
-                objekt: {foo: "bar"},
-                stringies: ["foo", "bar"],
-                ints: [1, 2],
-                floats: [0.01, 0.02],
-                datetimes: [now.iso8601, now.iso8601],
-                scalarArray: [1, 2],
-                objectArray: [{foo: "bar"}, {baz: "bazoo"}]
-              }
-            ]
+            employees: {
+              nodes: [
+                {
+                  active: true,
+                  age: 60,
+                  change: 0.76,
+                  createdAt: now.iso8601,
+                  today: now.to_date,
+                  firstName: "Stephen",
+                  id: "1",
+                  objekt: {foo: "bar"},
+                  stringies: ["foo", "bar"],
+                  ints: [1, 2],
+                  floats: [0.01, 0.02],
+                  datetimes: [now.iso8601, now.iso8601],
+                  scalarArray: [1, 2],
+                  objectArray: [{foo: "bar"}, {baz: "bazoo"}]
+                },
+                {
+                  active: true,
+                  age: 70,
+                  change: 0.76,
+                  createdAt: now.iso8601,
+                  today: now.to_date,
+                  firstName: "Agatha",
+                  id: "2",
+                  objekt: {foo: "bar"},
+                  stringies: ["foo", "bar"],
+                  ints: [1, 2],
+                  floats: [0.01, 0.02],
+                  datetimes: [now.iso8601, now.iso8601],
+                  scalarArray: [1, 2],
+                  objectArray: [{foo: "bar"}, {baz: "bazoo"}]
+                }
+              ]
+            }
           })
         end
 
@@ -318,15 +346,19 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 employees {
-                  myCustom
+                  nodes {
+                    myCustom
+                  }
                 }
               }
             ))
             expect(json).to eq({
-              employees: [
-                {myCustom: "custom!"},
-                {myCustom: "custom!"}
-              ]
+              employees: {
+                nodes: [
+                  {myCustom: "custom!"},
+                  {myCustom: "custom!"}
+                ]
+              }
             })
           end
         end
@@ -340,27 +372,31 @@ RSpec.describe GraphitiGraphQL do
       context "when id and _type are requested" do
         it "works" do
           json = run(%(
-            query getEmployees {
+            query {
               employees {
-                id
-                _type
-                firstName
+                nodes {
+                  id
+                  _type
+                  firstName
+                }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {
-                id: employee1.id.to_s,
-                _type: "employees",
-                firstName: "Stephen"
-              },
-              {
-                id: employee2.id.to_s,
-                _type: "employees",
-                firstName: "Agatha"
-              }
-            ]
+            employees: {
+              nodes: [
+                {
+                  id: employee1.id.to_s,
+                  _type: "employees",
+                  firstName: "Stephen"
+                },
+                {
+                  id: employee2.id.to_s,
+                  _type: "employees",
+                  firstName: "Agatha"
+                }
+              ]
+            }
           })
         end
       end
@@ -393,15 +429,19 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 employees {
-                  foo
+                  nodes {
+                    foo
+                  }
                 }
               }
             ))
             expect(json).to eq({
-              employees: [
-                {foo: "bar!"},
-                {foo: "bar!"}
-              ]
+              employees: {
+                nodes: [
+                  {foo: "bar!"},
+                  {foo: "bar!"}
+                ]
+              }
             })
           end
         end
@@ -414,7 +454,9 @@ RSpec.describe GraphitiGraphQL do
               run(%(
                 query {
                   employees {
-                    foo
+                    nodes {
+                      foo
+                    }
                   }
                 }
               ))
@@ -426,17 +468,21 @@ RSpec.describe GraphitiGraphQL do
       context "when extra_field is requested" do
         it "is still works" do
           json = run(%(
-            query getEmployees {
+            query {
               employees {
-                worth
+                nodes {
+                  worth
+                }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {worth: 100},
-              {worth: 100}
-            ]
+            employees: {
+              nodes: [
+                {worth: 100},
+                {worth: 100}
+              ]
+            }
           })
         end
       end
@@ -451,10 +497,12 @@ RSpec.describe GraphitiGraphQL do
 
         it "returns error" do
           json = run(%(
-            query getEmployees {
+            query {
               employees {
-                firstName
-                foo
+                nodes {
+                  firstName
+                  foo
+                }
               }
             }
           ))
@@ -468,12 +516,12 @@ RSpec.describe GraphitiGraphQL do
                 },
                 locations: [
                   {
-                    column: 17,
-                    line: 5
+                    column: 19,
+                    line: 6
                   }
                 ],
                 message: "Field 'foo' doesn't exist on type 'POROEmployee'",
-                path: ["query getEmployees", "employees", "foo"]
+                path: ["query", "employees", "nodes", "foo"]
               }
             ]
           })
@@ -490,21 +538,25 @@ RSpec.describe GraphitiGraphQL do
 
         it "is reflected in the result" do
           json = run(%(
-            query getEmployees {
+            query {
               employees {
-                foo
+                nodes {
+                  foo
+                }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {
-                foo: "STEPHEN"
-              },
-              {
-                foo: "AGATHA"
-              }
-            ]
+            employees: {
+              nodes: [
+                {
+                  foo: "STEPHEN"
+                },
+                {
+                  foo: "AGATHA"
+                }
+              ]
+            }
           })
         end
       end
@@ -522,38 +574,46 @@ RSpec.describe GraphitiGraphQL do
 
         it "respects the request" do
           json = run(%(
-            query getEmployees {
+            query {
               employees {
-                firstName
-                positions {
-                  id
-                  title
-                  department {
-                    _type
-                    name
+                nodes {
+                  firstName
+                  positions {
+                    nodes {
+                      id
+                      title
+                      department {
+                        _type
+                        name
+                      }
+                    }
                   }
                 }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {
-                firstName: "Stephen",
-                positions: [{
-                  id: position1.id.to_s,
-                  title: "Manager",
-                  department: {
-                    _type: "departments",
-                    name: "Security"
+            employees: {
+              nodes: [
+                {
+                  firstName: "Stephen",
+                  positions: {
+                    nodes: [{
+                      id: position1.id.to_s,
+                      title: "Manager",
+                      department: {
+                        _type: "departments",
+                        name: "Security"
+                      }
+                    }]
                   }
-                }]
-              },
-              {
-                firstName: "Agatha",
-                positions: []
-              }
-            ]
+                },
+                {
+                  firstName: "Agatha",
+                  positions: {nodes: []}
+                }
+              ]
+            }
           })
         end
 
@@ -565,23 +625,29 @@ RSpec.describe GraphitiGraphQL do
 
           it "is" do
             json = run(%(
-              query getEmployees {
+              query {
                 employees {
-                  fooPositions {
-                    title
+                  nodes {
+                    fooPositions {
+                      nodes {
+                        title
+                      }
+                    }
                   }
                 }
               }
             ))
             expect(json).to eq({
-              employees: [
-                {
-                  fooPositions: [{title: "Manager"}]
-                },
-                {
-                  fooPositions: []
-                }
-              ]
+              employees: {
+                nodes: [
+                  {
+                    fooPositions: {nodes: [{title: "Manager"}]}
+                  },
+                  {
+                    fooPositions: {nodes: []}
+                  }
+                ]
+              }
             })
           end
         end
@@ -600,12 +666,16 @@ RSpec.describe GraphitiGraphQL do
 
           it "returns error" do
             json = run(%(
-              query getEmployees {
+              query {
                 employees {
-                  firstName
-                  positions {
-                    id
-                    title
+                  nodes {
+                    firstName
+                    positions {
+                      nodes {
+                        id
+                        title
+                      }
+                    }
                   }
                 }
               }
@@ -618,11 +688,11 @@ RSpec.describe GraphitiGraphQL do
                   typeName: "POROPosition"
                 },
                 locations: [{
-                  column: 21,
-                  line: 7
+                  column: 25,
+                  line: 9
                 }],
                 message: "Field 'title' doesn't exist on type 'POROPosition'",
-                path: ["query getEmployees", "employees", "positions", "title"]
+                path: ["query", "employees", "nodes", "positions", "nodes", "title"]
               ]
             })
           end
@@ -636,15 +706,19 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees {
               employees(filter: { firstName: { eq: "Agatha" } }) {
-                id
-                firstName
+                nodes {
+                  id
+                  firstName
+                }
               }
             }
           |)
-          expect(json[:employees]).to eq([{
-            id: employee2.id.to_s,
-            firstName: "Agatha"
-          }])
+          expect(json[:employees]).to eq({
+            nodes: [{
+              id: employee2.id.to_s,
+              firstName: "Agatha"
+            }]
+          })
         end
       end
 
@@ -653,15 +727,72 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees($name: String) {
               employees(filter: { firstName: { eq: $name } }) {
-                id
-                firstName
+                nodes {
+                  id
+                  firstName
+                }
               }
             }
           |, {"name" => "Agatha"})
-          expect(json[:employees]).to eq([{
-            id: employee2.id.to_s,
-            firstName: "Agatha"
-          }])
+          expect(json[:employees]).to eq({
+            nodes: [{
+              id: employee2.id.to_s,
+              firstName: "Agatha"
+            }]
+          })
+        end
+      end
+
+      context "when passing array" do
+        let!(:employee3) { PORO::Employee.create(first_name: "George") }
+
+        it "works" do
+          json = run(%|
+            query {
+              employees(filter: { id: { eq: [1, 3] } }) {
+                nodes {
+                  id
+                  firstName
+                }
+              }
+            }
+          |)
+          expect(json).to eq({
+            employees: {
+              nodes: [
+                {
+                  id: "1",
+                  firstName: "Stephen"
+                },
+                {
+                  id: "3",
+                  firstName: "George"
+                }
+              ]
+            }
+          })
+        end
+
+        context "and the filter is marked single: true" do
+          before do
+            resource.filter :id, single: true
+            schema!([resource])
+          end
+
+          it "raises error" do
+            json = run(%|
+              query {
+                employees(filter: { id: { eq: [1, 3] } }) {
+                  nodes {
+                    id
+                    firstName
+                  }
+                }
+              }
+            |)
+            expect(json[:errors][0][:message])
+              .to eq("Argument 'eq' on InputObject 'POROEmployeeFilterFilterid' has an invalid value ([1, 3]). Expected type 'Int'.")
+          end
         end
       end
 
@@ -677,8 +808,10 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees($name: String) {
               employees(filter: { firstName: { eq: $name } }) {
-                id
-                firstName
+                nodes {
+                  id
+                  firstName
+                }
               }
             }
           |, {"name" => "Agatha"})
@@ -727,8 +860,10 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees($name: String) {
               employees(filter: { firstName: { eq: "A" } }) {
-                id
-                firstName
+                nodes {
+                  id
+                  firstName
+                }
               }
             }
           |)
@@ -770,10 +905,12 @@ RSpec.describe GraphitiGraphQL do
           it "returns error" do
             running = lambda do
               run(%|
-                query getEmployees {
+                query {
                   employees(filter: { guardedFirstName: { eq: "Agatha" } }) {
-                    id
-                    firstName
+                    nodes {
+                      id
+                      firstName
+                    }
                   }
                 }
               |)
@@ -787,16 +924,20 @@ RSpec.describe GraphitiGraphQL do
             ctx = OpenStruct.new(current_user: "admin")
             Graphiti.with_context(ctx, :index) do
               json = run(%|
-                query getEmployees {
+                query {
                   employees(filter: { guardedFirstName: { eq: "Agatha" } }) {
-                    firstName
+                    nodes {
+                      firstName
+                    }
                   }
                 }
               |)
               expect(json).to eq({
-                employees: [{
-                  firstName: "Agatha"
-                }]
+                employees: {
+                  nodes: [{
+                    firstName: "Agatha"
+                  }]
+                }
               })
             end
           end
@@ -830,23 +971,31 @@ RSpec.describe GraphitiGraphQL do
         context "via hardcoded request" do
           it "works" do
             json = run(%|
-              query getEmployees {
+              query {
                 employees(filter: { firstName: { eq: "Agatha" } }) {
-                  id
-                  firstName
-                  positions(filter: { active: { eq: true } }) {
-                    title
+                  nodes {
+                    id
+                    firstName
+                    positions(filter: { active: { eq: true } }) {
+                      nodes {
+                        title
+                      }
+                    }
                   }
                 }
               }
             |)
-            expect(json[:employees]).to eq([{
-              id: employee2.id.to_s,
-              firstName: "Agatha",
-              positions: [{
-                title: "Engineer"
+            expect(json[:employees]).to eq({
+              nodes: [{
+                id: employee2.id.to_s,
+                firstName: "Agatha",
+                positions: {
+                  nodes: [{
+                    title: "Engineer"
+                  }]
+                }
               }]
-            }])
+            })
           end
         end
 
@@ -855,21 +1004,27 @@ RSpec.describe GraphitiGraphQL do
             json = run(%|
               query getEmployees($name: String, $active: Boolean) {
                 employees(filter: { firstName: { eq: $name } }) {
-                  id
-                  firstName
-                  positions(filter: { active: { eq: $active } }) {
-                    title
+                  nodes {
+                    id
+                    firstName
+                    positions(filter: { active: { eq: $active } }) {
+                      nodes {
+                        title
+                      }
+                    }
                   }
                 }
               }
             |, {"name" => "Agatha", "active" => true})
-            expect(json[:employees]).to eq([{
-              id: employee2.id.to_s,
-              firstName: "Agatha",
-              positions: [{
-                title: "Engineer"
+            expect(json[:employees]).to eq({
+              nodes: [{
+                id: employee2.id.to_s,
+                firstName: "Agatha",
+                positions: {
+                  nodes: [{title: "Engineer"}]
+                }
               }]
-            }])
+            })
           end
         end
 
@@ -906,14 +1061,20 @@ RSpec.describe GraphitiGraphQL do
             json = run(%|
               query getEmployees($name: String, $teamName: String) {
                 employees(filter: { firstName: { eq: $name } }) {
-                  id
-                  firstName
-                  positions {
-                    title
-                    department {
-                      name
-                      teams(filter: { name: { eq: $teamName } }) {
-                        name
+                  nodes {
+                    id
+                    firstName
+                    positions {
+                      nodes {
+                        title
+                        department {
+                          name
+                          teams(filter: { name: { eq: $teamName } }) {
+                            nodes {
+                              name
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -921,29 +1082,33 @@ RSpec.describe GraphitiGraphQL do
               }
             |, {"name" => "Agatha", "teamName" => "Team 3"})
             expect(json).to eq({
-              employees: [{
-                firstName: "Agatha",
-                id: "2",
-                positions: [
-                  {
-                    department: {
-                      name: "Safety",
-                      teams: [
-                        {name: "Team 3"}
-                      ]
-                    },
-                    title: "Manager"
-                  },
-                  {
-                    department: nil,
-                    title: "Engineer"
-                  },
-                  {
-                    department: nil,
-                    title: "Old Manager"
+              employees: {
+                nodes: [{
+                  firstName: "Agatha",
+                  id: "2",
+                  positions: {
+                    nodes: [
+                      {
+                        department: {
+                          name: "Safety",
+                          teams: {
+                            nodes: [{name: "Team 3"}]
+                          }
+                        },
+                        title: "Manager"
+                      },
+                      {
+                        department: nil,
+                        title: "Engineer"
+                      },
+                      {
+                        department: nil,
+                        title: "Old Manager"
+                      }
+                    ]
                   }
-                ]
-              }]
+                }]
+              }
             })
           end
         end
@@ -966,7 +1131,9 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 employees {
-                  firstName
+                  nodes {
+                    firstName
+                  }
                 }
               }
             ))
@@ -980,7 +1147,9 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 employees(filter: { lastName: { eq: "A" } }) {
-                  firstName
+                  nodes {
+                    firstName
+                  }
                 }
               }
             ))
@@ -994,12 +1163,14 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 employees(filter: { foo: { prefix: "A" } }) {
-                  firstName
+                  nodes {
+                    firstName
+                  }
                 }
               }
             ))
             expect(json[:errors][0][:message])
-              .to eq("Argument 'eq' on InputObject 'POROEmployeeFilterFilterfoo' is required. Expected type String!")
+              .to eq("Argument 'eq' on InputObject 'POROEmployeeFilterFilterfoo' is required. Expected type [String!]!")
           end
         end
 
@@ -1008,14 +1179,18 @@ RSpec.describe GraphitiGraphQL do
             json = run(%|
               query {
                 employees(filter: { foo: { eq: "Agatha" } }) {
-                  firstName
+                  nodes {
+                    firstName
+                  }
                 }
               }
             |)
             expect(json).to eq({
-              employees: [{
-                firstName: "Agatha"
-              }]
+              employees: {
+                nodes: [{
+                  firstName: "Agatha"
+                }]
+              }
             })
           end
         end
@@ -1058,16 +1233,20 @@ RSpec.describe GraphitiGraphQL do
           json = run(%(
             query {
               employees(filter: { myCustom: { eq: "foo" } }) {
-                id
-                firstName
+                nodes {
+                  id
+                  firstName
+                }
               }
             }
           ))
           expect(json).to eq({
-            employees: [{
-              id: "999",
-              firstName: "custom!"
-            }]
+            employees: {
+              nodes: [{
+                id: "999",
+                firstName: "custom!"
+              }]
+            }
           })
         end
       end
@@ -1079,19 +1258,23 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees {
               employees(sort: [{ att: firstName, dir: asc }]) {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           |)
           expect(json).to eq({
-            employees: [
-              {
-                firstName: "Agatha"
-              },
-              {
-                firstName: "Stephen"
-              }
-            ]
+            employees: {
+              nodes: [
+                {
+                  firstName: "Agatha"
+                },
+                {
+                  firstName: "Stephen"
+                }
+              ]
+            }
           })
         end
       end
@@ -1101,19 +1284,23 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees($sort: [POROEmployeeSort!]) {
               employees(sort: $sort) {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           |, {"sort" => [{"att" => "firstName", "dir" => "asc"}]})
           expect(json).to eq({
-            employees: [
-              {
-                firstName: "Agatha"
-              },
-              {
-                firstName: "Stephen"
-              }
-            ]
+            employees: {
+              nodes: [
+                {
+                  firstName: "Agatha"
+                },
+                {
+                  firstName: "Stephen"
+                }
+              ]
+            }
           })
         end
       end
@@ -1130,7 +1317,9 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees($sort: [POROEmployeeSort!]) {
               employees(sort: $sort) {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           |, {"sort" => [{"att" => "firstName", "dir" => "asc"}]})
@@ -1161,17 +1350,21 @@ RSpec.describe GraphitiGraphQL do
             ctx = OpenStruct.new(current_user: "admin")
             Graphiti.with_context ctx do
               json = run(%|
-                query getEmployees {
+                query {
                   employees(sort: [{ att: guardedFirstName, dir: asc }]) {
-                    firstName
+                    nodes {
+                      firstName
+                    }
                   }
                 }
               |)
               expect(json).to eq({
-                employees: [
-                  {firstName: "Agatha"},
-                  {firstName: "Stephen"}
-                ]
+                employees: {
+                  nodes: [
+                    {firstName: "Agatha"},
+                    {firstName: "Stephen"}
+                  ]
+                }
               })
             end
           end
@@ -1183,7 +1376,9 @@ RSpec.describe GraphitiGraphQL do
               json = run(%|
                 query getEmployees {
                   employees(sort: [{ att: guardedFirstName, dir: asc }]) {
-                    firstName
+                    nodes {
+                      firstName
+                    }
                   }
                 }
               |)
@@ -1211,30 +1406,38 @@ RSpec.describe GraphitiGraphQL do
         context "via hardcoding" do
           it "works" do
             json = run(%|
-              query getEmployees {
+              query {
                 employees(filter: { firstName: { eq: "Stephen" } }) {
-                  firstName
-                  positions(sort: [{ att: title, dir: desc }]) {
-                    title
+                  nodes {
+                    firstName
+                    positions(sort: [{ att: title, dir: desc }]) {
+                      nodes {
+                        title
+                      }
+                    }
                   }
                 }
               }
             |)
             expect(json).to eq({
-              employees: [{
-                firstName: "Stephen",
-                positions: [
-                  {
-                    title: "C"
-                  },
-                  {
-                    title: "B"
-                  },
-                  {
-                    title: "A"
+              employees: {
+                nodes: [{
+                  firstName: "Stephen",
+                  positions: {
+                    nodes: [
+                      {
+                        title: "C"
+                      },
+                      {
+                        title: "B"
+                      },
+                      {
+                        title: "A"
+                      }
+                    ]
                   }
-                ]
-              }]
+                }]
+              }
             })
           end
         end
@@ -1244,28 +1447,36 @@ RSpec.describe GraphitiGraphQL do
             json = run(%|
               query getEmployees($positionSort: [POROPositionSort!]) {
                 employees(filter: { firstName: { eq: "Stephen" } }) {
-                  firstName
-                  positions(sort: $positionSort) {
-                    title
+                  nodes {
+                    firstName
+                    positions(sort: $positionSort) {
+                      nodes {
+                        title
+                      }
+                    }
                   }
                 }
               }
             |, {"positionSort" => [{"att" => "title", "dir" => "desc"}]})
             expect(json).to eq({
-              employees: [{
-                firstName: "Stephen",
-                positions: [
-                  {
-                    title: "C"
-                  },
-                  {
-                    title: "B"
-                  },
-                  {
-                    title: "A"
+              employees: {
+                nodes: [{
+                  firstName: "Stephen",
+                  positions: {
+                    nodes: [
+                      {
+                        title: "C"
+                      },
+                      {
+                        title: "B"
+                      },
+                      {
+                        title: "A"
+                      }
+                    ]
                   }
-                ]
-              }]
+                }]
+              }
             })
           end
         end
@@ -1292,10 +1503,16 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees {
               employees(filter: { firstName: { eq: "Stephen" } }) {
-                positions {
-                  department {
-                    teams(sort: [{ att: name, dir: desc }]) {
-                      name
+                nodes {
+                  positions {
+                    nodes {
+                      department {
+                        teams(sort: [{ att: name, dir: desc }]) {
+                          nodes {
+                            name
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -1303,13 +1520,23 @@ RSpec.describe GraphitiGraphQL do
             }
           |)
           expect(json).to eq({
-            employees: [{
-              positions: [{
-                department: {
-                  teams: [{name: "C"}, {name: "B"}, {name: "A"}]
+            employees: {
+              nodes: [{
+                positions: {
+                  nodes: [{
+                    department: {
+                      teams: {
+                        nodes: [
+                          {name: "C"},
+                          {name: "B"},
+                          {name: "A"}
+                        ]
+                      }
+                    }
+                  }]
                 }
               }]
-            }]
+            }
           })
         end
       end
@@ -1321,29 +1548,37 @@ RSpec.describe GraphitiGraphQL do
       context "via hardcoding" do
         it "works" do
           json = run(%|
-            query getEmployees {
+            query {
               employees(page: { size: 2, number: 1 }) {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           |)
           expect(json).to eq({
-            employees: [
-              {firstName: "Stephen"},
-              {firstName: "Agatha"}
-            ]
+            employees: {
+              nodes: [
+                {firstName: "Stephen"},
+                {firstName: "Agatha"}
+              ]
+            }
           })
           json = run(%|
-            query getEmployees {
+            query {
               employees(page: { size: 2, number: 2 }) {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           |)
           expect(json).to eq({
-            employees: [
-              {firstName: "JK"}
-            ]
+            employees: {
+              nodes: [
+                {firstName: "JK"}
+              ]
+            }
           })
         end
       end
@@ -1353,27 +1588,35 @@ RSpec.describe GraphitiGraphQL do
           json = run(%|
             query getEmployees($page: Page) {
               employees(page: $page) {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           |, {"page" => {"size" => 2, "number" => 1}})
           expect(json).to eq({
-            employees: [
-              {firstName: "Stephen"},
-              {firstName: "Agatha"}
-            ]
+            employees: {
+              nodes: [
+                {firstName: "Stephen"},
+                {firstName: "Agatha"}
+              ]
+            }
           })
           json = run(%|
             query getEmployees {
               employees(page: { size: 2, number: 2 }) {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           |, {"page" => {"size" => 2, "number" => 1}})
           expect(json).to eq({
-            employees: [
-              {firstName: "JK"}
-            ]
+            employees: {
+              nodes: [
+                {firstName: "JK"}
+              ]
+            }
           })
         end
       end
@@ -1390,20 +1633,28 @@ RSpec.describe GraphitiGraphQL do
           context "via hardcoding" do
             it "works" do
               json = run(%|
-                query getEmployees {
+                query {
                   employees(page: { size: 1 }) {
-                    positions(page: { size: 1, number: 2 }) {
-                      title
+                    nodes {
+                      positions(page: { size: 1, number: 2 }) {
+                        nodes {
+                          title
+                        }
+                      }
                     }
                   }
                 }
               |)
               expect(json).to eq({
-                employees: [{
-                  positions: [{
-                    title: "Two"
+                employees: {
+                  nodes: [{
+                    positions: {
+                      nodes: [{
+                        title: "Two"
+                      }]
+                    }
                   }]
-                }]
+                }
               })
             end
           end
@@ -1413,18 +1664,26 @@ RSpec.describe GraphitiGraphQL do
               json = run(%|
                 query getEmployees($page: Page) {
                   employees(page: { size: 1 }) {
-                    positions(page: $page) {
-                      title
+                    nodes {
+                      positions(page: $page) {
+                        nodes {
+                          title
+                        }
+                      }
                     }
                   }
                 }
               |, {"page" => {"size" => 1, "number" => 2}})
               expect(json).to eq({
-                employees: [{
-                  positions: [{
-                    title: "Two"
+                employees: {
+                  nodes: [{
+                    positions: {
+                      nodes: [{
+                        title: "Two"
+                      }]
+                    }
                   }]
-                }]
+                }
               })
             end
           end
@@ -1436,8 +1695,12 @@ RSpec.describe GraphitiGraphQL do
               run(%|
                 query getEmployees($page: Page) {
                   employees(page: { size: 2 }) {
-                    positions(page: $page) {
-                      title
+                    nodes {
+                      positions(page: $page) {
+                        nodes {
+                          title
+                        }
+                      }
                     }
                   }
                 }
@@ -1465,12 +1728,18 @@ RSpec.describe GraphitiGraphQL do
 
           it "still works" do
             json = run(%|
-              query getEmployees {
+              query {
                 employees(page: { size: 1 }) {
-                  positions(page: { size: 1 }) {
-                    department {
-                      teams(page: { size: 1, number: 2 }) {
-                        name
+                  nodes {
+                    positions(page: { size: 1 }) {
+                      nodes {
+                        department {
+                          teams(page: { size: 1, number: 2 }) {
+                            nodes {
+                              name
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -1478,15 +1747,21 @@ RSpec.describe GraphitiGraphQL do
               }
             |)
             expect(json).to eq({
-              employees: [{
-                positions: [{
-                  department: {
-                    teams: [{
-                      name: "Two"
+              employees: {
+                nodes: [{
+                  positions: {
+                    nodes: [{
+                      department: {
+                        teams: {
+                          nodes: [{
+                            name: "Two"
+                          }]
+                        }
+                      }
                     }]
                   }
                 }]
-              }]
+              }
             })
           end
         end
@@ -1502,20 +1777,26 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             employees {
-              firstName
+              nodes {
+                firstName
+              }
             }
           }
         ))
         expect(json).to eq({
-          employees: [
-            {firstName: "Stephen"},
-            {firstName: "Agatha"}
-          ]
+          employees: {
+            nodes: [
+              {firstName: "Stephen"},
+              {firstName: "Agatha"}
+            ]
+          }
         })
         json = run(%(
           query {
             positions {
-              title
+              nodes {
+                title
+              }
             }
           }
         ))
@@ -1525,12 +1806,14 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             positions {
-              title
+              nodes {
+                title
+              }
             }
           }
         ))
         expect(json).to eq({
-          positions: []
+          positions: {nodes: []}
         })
       end
 
@@ -1543,20 +1826,26 @@ RSpec.describe GraphitiGraphQL do
           json = run(%(
             query {
               employees {
-                firstName
+                nodes {
+                  firstName
+                }
               }
             }
           ))
           expect(json).to eq({
-            employees: [
-              {firstName: "Stephen"},
-              {firstName: "Agatha"}
-            ]
+            employees: {
+              nodes: [
+                {firstName: "Stephen"},
+                {firstName: "Agatha"}
+              ]
+            }
           })
           json = run(%(
             query {
               positions {
-                title
+                nodes {
+                  title
+                }
               }
             }
           ))
@@ -1567,12 +1856,14 @@ RSpec.describe GraphitiGraphQL do
           json = run(%(
             query {
               positions {
-                title
+                nodes {
+                  title
+                }
               }
             }
           ))
           expect(json).to eq({
-            positions: []
+            positions: {nodes: []}
           })
         end
       end
@@ -1585,16 +1876,20 @@ RSpec.describe GraphitiGraphQL do
 
       it "works" do
         json = run(%(
-          query getPositions {
+          query {
             positions {
-              title
+              nodes {
+                title
+              }
             }
           }
         ))
         expect(json).to eq({
-          positions: [{
-            title: "Standalone"
-          }]
+          positions: {
+            nodes: [{
+              title: "Standalone"
+            }]
+          }
         })
       end
     end
@@ -1613,34 +1908,38 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             creditCards {
-              id
-              _type
-              number
-              description
+              nodes {
+                id
+                _type
+                number
+                description
+              }
             }
           }
         ))
         expect(json).to eq({
-          creditCards: [
-            {
-              id: "1",
-              _type: "visas",
-              number: 1,
-              description: "visa description"
-            },
-            {
-              id: "2",
-              _type: "gold_visas",
-              number: 2,
-              description: "visa description"
-            },
-            {
-              id: "3",
-              _type: "mastercards",
-              number: 3,
-              description: "mastercard description"
-            }
-          ]
+          creditCards: {
+            nodes: [
+              {
+                id: "1",
+                _type: "visas",
+                number: 1,
+                description: "visa description"
+              },
+              {
+                id: "2",
+                _type: "gold_visas",
+                number: 2,
+                description: "visa description"
+              },
+              {
+                id: "3",
+                _type: "mastercards",
+                number: 3,
+                description: "mastercard description"
+              }
+            ]
+          }
         })
       end
 
@@ -1649,27 +1948,35 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             employees {
-              firstName
-              creditCards {
-                _type
-                number
+              nodes {
+                firstName
+                creditCards {
+                  nodes {
+                    _type
+                    number
+                  }
+                }
               }
             }
           }
         ))
         expect(json).to eq({
-          employees: [
-            {
-              firstName: "Stephen",
-              creditCards: []
-            },
-            {
-              firstName: "Agatha",
-              creditCards: [{
-                _type: "visas", number: 1
-              }]
-            }
-          ]
+          employees: {
+            nodes: [
+              {
+                firstName: "Stephen",
+                creditCards: {nodes: []}
+              },
+              {
+                firstName: "Agatha",
+                creditCards: {
+                  nodes: [{
+                    _type: "visas", number: 1
+                  }]
+                }
+              }
+            ]
+          }
         })
       end
 
@@ -1684,18 +1991,24 @@ RSpec.describe GraphitiGraphQL do
           json = run(%(
             query {
               creditCards {
-                transactions {
-                  amount
+                nodes {
+                  transactions {
+                    nodes {
+                      amount
+                    }
+                  }
                 }
               }
             }
           ))
           expect(json).to eq({
-            creditCards: [
-              {transactions: []},
-              {transactions: []},
-              {transactions: [{amount: 100}]}
-            ]
+            creditCards: {
+              nodes: [
+                {transactions: {nodes: []}},
+                {transactions: {nodes: []}},
+                {transactions: {nodes: [{amount: 100}]}}
+              ]
+            }
           })
         end
       end
@@ -1706,26 +2019,30 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 creditCards {
-                  _type
-                  ...on POROMastercard {
-                    number
+                  nodes {
+                    _type
+                    ...on POROMastercard {
+                      number
+                    }
                   }
                 }
               }
             ))
             expect(json).to eq({
-              creditCards: [
-                {
-                  _type: "visas"
-                },
-                {
-                  _type: "gold_visas"
-                },
-                {
-                  _type: "mastercards",
-                  number: 3
-                }
-              ]
+              creditCards: {
+                nodes: [
+                  {
+                    _type: "visas"
+                  },
+                  {
+                    _type: "gold_visas"
+                  },
+                  {
+                    _type: "mastercards",
+                    number: 3
+                  }
+                ]
+              }
             })
           end
         end
@@ -1735,26 +2052,30 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 creditCards {
-                  _type
-                  ...on POROVisa {
-                    visaOnlyAttr
+                  nodes {
+                    _type
+                    ...on POROVisa {
+                      visaOnlyAttr
+                    }
                   }
                 }
               }
             ))
             expect(json).to eq({
-              creditCards: [
-                {
-                  _type: "visas",
-                  visaOnlyAttr: "visa only"
-                },
-                {
-                  _type: "gold_visas"
-                },
-                {
-                  _type: "mastercards"
-                }
-              ]
+              creditCards: {
+                nodes: [
+                  {
+                    _type: "visas",
+                    visaOnlyAttr: "visa only"
+                  },
+                  {
+                    _type: "gold_visas"
+                  },
+                  {
+                    _type: "mastercards"
+                  }
+                ]
+              }
             })
           end
         end
@@ -1776,24 +2097,32 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards {
-                    _type
-                    ...on POROVisa {
-                      transactions {
-                        amount
+                    nodes {
+                      _type
+                      ...on POROVisa {
+                        transactions {
+                          nodes {
+                            amount
+                          }
+                        }
                       }
                     }
                   }
                 }
               ))
               expect(json).to eq({
-                creditCards: [
-                  {
-                    _type: "visas",
-                    transactions: [{amount: 100}, {amount: 200}]
-                  },
-                  {_type: "gold_visas"},
-                  {_type: "mastercards"}
-                ]
+                creditCards: {
+                  nodes: [
+                    {
+                      _type: "visas",
+                      transactions: {
+                        nodes: [{amount: 100}, {amount: 200}]
+                      }
+                    },
+                    {_type: "gold_visas"},
+                    {_type: "mastercards"}
+                  ]
+                }
               })
             end
 
@@ -1801,24 +2130,30 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards {
-                    _type
-                    ...on POROVisa {
-                      transactions(filter: { amount: { eq: 200 } }) {
-                        amount
+                    nodes {
+                      _type
+                      ...on POROVisa {
+                        transactions(filter: { amount: { eq: 200 } }) {
+                          nodes {
+                            amount
+                          }
+                        }
                       }
                     }
                   }
                 }
               ))
               expect(json).to eq({
-                creditCards: [
-                  {
-                    _type: "visas",
-                    transactions: [{amount: 200}]
-                  },
-                  {_type: "gold_visas"},
-                  {_type: "mastercards"}
-                ]
+                creditCards: {
+                  nodes: [
+                    {
+                      _type: "visas",
+                      transactions: {nodes: [{amount: 200}]}
+                    },
+                    {_type: "gold_visas"},
+                    {_type: "mastercards"}
+                  ]
+                }
               })
             end
 
@@ -1826,24 +2161,32 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards {
-                    _type
-                    ...on POROVisa {
-                      transactions(sort: [{ att: amount, dir: desc }]) {
-                        amount
+                    nodes {
+                      _type
+                      ...on POROVisa {
+                        transactions(sort: [{ att: amount, dir: desc }]) {
+                          nodes {
+                            amount
+                          }
+                        }
                       }
                     }
                   }
                 }
               ))
               expect(json).to eq({
-                creditCards: [
-                  {
-                    _type: "visas",
-                    transactions: [{amount: 200}, {amount: 100}]
-                  },
-                  {_type: "gold_visas"},
-                  {_type: "mastercards"}
-                ]
+                creditCards: {
+                  nodes: [
+                    {
+                      _type: "visas",
+                      transactions: {
+                        nodes: [{amount: 200}, {amount: 100}]
+                      }
+                    },
+                    {_type: "gold_visas"},
+                    {_type: "mastercards"}
+                  ]
+                }
               })
             end
 
@@ -1851,22 +2194,28 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards(page: { size: 1 }) {
-                    _type
-                    ...on POROVisa {
-                      transactions(page: { size: 1, number: 2 }) {
-                        amount
+                    nodes {
+                      _type
+                      ...on POROVisa {
+                        transactions(page: { size: 1, number: 2 }) {
+                          nodes {
+                            amount
+                          }
+                        }
                       }
                     }
                   }
                 }
               ))
               expect(json).to eq({
-                creditCards: [
-                  {
-                    _type: "visas",
-                    transactions: [{amount: 200}]
-                  }
-                ]
+                creditCards: {
+                  nodes: [
+                    {
+                      _type: "visas",
+                      transactions: {nodes: [{amount: 200}]}
+                    }
+                  ]
+                }
               })
             end
           end
@@ -1889,7 +2238,7 @@ RSpec.describe GraphitiGraphQL do
             end
 
             def transactions(json)
-              json[:creditCards][1][:visaRewards][0][:rewardTransactions]
+              json[:creditCards][:nodes][1][:visaRewards][:nodes][0][:rewardTransactions][:nodes]
             end
 
             it "works" do
@@ -1900,13 +2249,19 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards {
-                    _type
-                    ...on POROGoldVisa {
-                      visaRewards {
-                        id
-                        points
-                        rewardTransactions {
-                          amount
+                    nodes {
+                      _type
+                      ...on POROGoldVisa {
+                        visaRewards {
+                          nodes {
+                            id
+                            points
+                            rewardTransactions {
+                              nodes {
+                                amount
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -1923,13 +2278,19 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards {
-                    _type
-                    ...on POROGoldVisa {
-                      visaRewards {
-                        id
-                        points
-                        rewardTransactions(filter: { amount: { eq: 200 } }) {
-                          amount
+                    nodes {
+                      _type
+                      ...on POROGoldVisa {
+                        visaRewards {
+                          nodes {
+                            id
+                            points
+                            rewardTransactions(filter: { amount: { eq: 200 } }) {
+                              nodes {
+                                amount
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -1945,13 +2306,19 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards {
-                    _type
-                    ...on POROGoldVisa {
-                      visaRewards {
-                        id
-                        points
-                        rewardTransactions(sort: [{ att: amount, dir: desc }]) {
-                          amount
+                    nodes {
+                      _type
+                      ...on POROGoldVisa {
+                        visaRewards {
+                          nodes {
+                            id
+                            points
+                            rewardTransactions(sort: [{ att: amount, dir: desc }]) {
+                              nodes {
+                                amount
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -1968,21 +2335,27 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards(page: { size: 1, number: 2 }) {
-                    _type
-                    ...on POROGoldVisa {
-                      visaRewards(page: { size: 1 }) {
-                        id
-                        points
-                        rewardTransactions(page: { size: 1, number: 2 }) {
-                          amount
+                    nodes {
+                      _type
+                      ...on POROGoldVisa {
+                        visaRewards(page: { size: 1 }) {
+                          nodes {
+                            id
+                            points
+                            rewardTransactions(page: { size: 1, number: 2 }) {
+                              nodes {
+                                amount
+                              }
+                            }
+                          }
                         }
                       }
                     }
                   }
                 }
               ))
-              rewards = json[:creditCards][0][:visaRewards][0]
-              expect(rewards[:rewardTransactions]).to eq([
+              rewards = json[:creditCards][:nodes][0][:visaRewards][:nodes][0]
+              expect(rewards[:rewardTransactions][:nodes]).to eq([
                 {amount: 200}
               ])
             end
@@ -2002,13 +2375,19 @@ RSpec.describe GraphitiGraphQL do
                       employee {
                         firstName
                         creditCards {
-                          _type
-                          ...on POROGoldVisa {
-                            visaRewards {
-                              id
-                              points
-                              rewardTransactions {
-                                amount
+                          nodes {
+                            _type
+                            ...on POROGoldVisa {
+                              visaRewards {
+                                nodes {
+                                  id
+                                  points
+                                  rewardTransactions {
+                                    nodes {
+                                      amount
+                                    }
+                                  }
+                                }
                               }
                             }
                           }
@@ -2021,27 +2400,33 @@ RSpec.describe GraphitiGraphQL do
                   position: {
                     employee: {
                       firstName: "Agatha",
-                      creditCards: [
-                        {_type: "visas"},
-                        {
-                          _type: "gold_visas",
-                          visaRewards: [
-                            {
-                              id: reward1.id.to_s,
-                              points: 5,
-                              rewardTransactions: [
-                                {amount: 100},
-                                {amount: 200}
+                      creditCards: {
+                        nodes: [
+                          {_type: "visas"},
+                          {
+                            _type: "gold_visas",
+                            visaRewards: {
+                              nodes: [
+                                {
+                                  id: reward1.id.to_s,
+                                  points: 5,
+                                  rewardTransactions: {
+                                    nodes: [
+                                      {amount: 100},
+                                      {amount: 200}
+                                    ]
+                                  }
+                                },
+                                {
+                                  id: reward2.id.to_s,
+                                  points: 10,
+                                  rewardTransactions: {nodes: []}
+                                }
                               ]
-                            },
-                            {
-                              id: reward2.id.to_s,
-                              points: 10,
-                              rewardTransactions: []
                             }
-                          ]
-                        }
-                      ]
+                          }
+                        ]
+                      }
                     }
                   }
                 })
@@ -2062,28 +2447,36 @@ RSpec.describe GraphitiGraphQL do
               json = run(%(
                 query {
                   creditCards {
-                    _type
-                    ...on POROMastercard {
-                      mastercardMiles {
-                        id
-                        amount
+                    nodes {
+                      _type
+                      ...on POROMastercard {
+                        mastercardMiles {
+                          nodes {
+                            id
+                            amount
+                          }
+                        }
                       }
                     }
                   }
                 }
               ))
               expect(json).to eq({
-                creditCards: [
-                  {_type: "visas"},
-                  {_type: "gold_visas"},
-                  {
-                    _type: "mastercards",
-                    mastercardMiles: [{
-                      id: mile.id.to_s,
-                      amount: 100
-                    }]
-                  }
-                ]
+                creditCards: {
+                  nodes: [
+                    {_type: "visas"},
+                    {_type: "gold_visas"},
+                    {
+                      _type: "mastercards",
+                      mastercardMiles: {
+                        nodes: [{
+                          id: mile.id.to_s,
+                          amount: 100
+                        }]
+                      }
+                    }
+                  ]
+                }
               })
             end
           end
@@ -2102,21 +2495,27 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             employees {
-              notes {
-                body
+              nodes {
+                notes {
+                  nodes {
+                    body
+                  }
+                }
               }
             }
           }
         ))
         expect(json).to eq({
-          employees: [
-            {
-              notes: []
-            },
-            {
-              notes: [{body: "foo"}]
-            }
-          ]
+          employees: {
+            nodes: [
+              {
+                notes: {nodes: []}
+              },
+              {
+                notes: {nodes: [{body: "foo"}]}
+              }
+            ]
+          }
         })
       end
     end
@@ -2142,23 +2541,31 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             employees {
-              notes {
-                body
+              nodes {
+                notes {
+                  nodes {
+                    body
+                  }
+                }
               }
             }
           }
         ))
         expect(json).to eq({
-          employees: [
-            {
-              notes: [{
-                body: "A"
-              }]
-            },
-            {
-              notes: []
-            }
-          ]
+          employees: {
+            nodes: [
+              {
+                notes: {
+                  nodes: [{
+                    body: "A"
+                  }]
+                }
+              },
+              {
+                notes: {nodes: []}
+              }
+            ]
+          }
         })
       end
 
@@ -2169,29 +2576,41 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             employees {
-              notes {
-                body
-                edits {
-                  modification
+              nodes {
+                notes {
+                  nodes {
+                    body
+                    edits {
+                      nodes {
+                        modification
+                      }
+                    }
+                  }
                 }
               }
             }
           }
         ))
         expect(json).to eq({
-          employees: [
-            {
-              notes: [{
-                body: "A",
-                edits: [{
-                  modification: "mod"
-                }]
-              }]
-            },
-            {
-              notes: []
-            }
-          ]
+          employees: {
+            nodes: [
+              {
+                notes: {
+                  nodes: [{
+                    body: "A",
+                    edits: {
+                      nodes: [{
+                        modification: "mod"
+                      }]
+                    }
+                  }]
+                }
+              },
+              {
+                notes: {nodes: []}
+              }
+            ]
+          }
         })
       end
     end
@@ -2215,31 +2634,35 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             notes {
-              id
-              notable {
+              nodes {
                 id
-                _type
+                notable {
+                  id
+                  _type
+                }
               }
             }
           }
         ))
         expect(json).to eq({
-          notes: [
-            {
-              id: note1.id.to_s,
-              notable: {
-                id: employee2.id.to_s,
-                _type: "employees"
+          notes: {
+            nodes: [
+              {
+                id: note1.id.to_s,
+                notable: {
+                  id: employee2.id.to_s,
+                  _type: "employees"
+                }
+              },
+              {
+                id: note2.id.to_s,
+                notable: {
+                  id: team.id.to_s,
+                  _type: "teams"
+                }
               }
-            },
-            {
-              id: note2.id.to_s,
-              notable: {
-                id: team.id.to_s,
-                _type: "teams"
-              }
-            }
-          ]
+            ]
+          }
         })
       end
 
@@ -2257,9 +2680,11 @@ RSpec.describe GraphitiGraphQL do
                 employee(id: "#{employee1.id}") {
                   firstName
                   notes {
-                    notable {
-                      id
-                      _type
+                    nodes {
+                      notable {
+                        id
+                        _type
+                      }
                     }
                   }
                 }
@@ -2268,12 +2693,14 @@ RSpec.describe GraphitiGraphQL do
             expect(json).to eq({
               employee: {
                 firstName: "Stephen",
-                notes: [{
-                  notable: {
-                    id: employee1.id.to_s,
-                    _type: "employees"
-                  }
-                }]
+                notes: {
+                  nodes: [{
+                    notable: {
+                      id: employee1.id.to_s,
+                      _type: "employees"
+                    }
+                  }]
+                }
               }
             })
           end
@@ -2285,38 +2712,42 @@ RSpec.describe GraphitiGraphQL do
           json = run(%(
             query {
               notes {
-                id
-                notable {
+                nodes {
                   id
-                  ...on POROEmployee {
-                    firstName
-                  }
-                  ...on POROTeam {
-                    _type
-                    name
+                  notable {
+                    id
+                    ...on POROEmployee {
+                      firstName
+                    }
+                    ...on POROTeam {
+                      _type
+                      name
+                    }
                   }
                 }
               }
             }
           ))
           expect(json).to eq({
-            notes: [
-              {
-                id: note1.id.to_s,
-                notable: {
-                  id: employee2.id.to_s,
-                  firstName: "Agatha"
+            notes: {
+              nodes: [
+                {
+                  id: note1.id.to_s,
+                  notable: {
+                    id: employee2.id.to_s,
+                    firstName: "Agatha"
+                  }
+                },
+                {
+                  id: note2.id.to_s,
+                  notable: {
+                    id: team.id.to_s,
+                    _type: "teams",
+                    name: "A Team"
+                  }
                 }
-              },
-              {
-                id: note2.id.to_s,
-                notable: {
-                  id: team.id.to_s,
-                  _type: "teams",
-                  name: "A Team"
-                }
-              }
-            ]
+              ]
+            }
           })
         end
 
@@ -2333,7 +2764,7 @@ RSpec.describe GraphitiGraphQL do
           end
 
           def positions(json)
-            json[:notes][0][:notable][:positions]
+            json[:notes][:nodes][0][:notable][:positions][:nodes]
           end
 
           it "can load" do
@@ -2342,18 +2773,22 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 notes {
-                  id
-                  notable {
+                  nodes {
                     id
-                    ...on POROEmployee {
-                      firstName
-                      positions {
-                        title
+                    notable {
+                      id
+                      ...on POROEmployee {
+                        firstName
+                        positions {
+                          nodes {
+                            title
+                          }
+                        }
                       }
-                    }
-                    ...on POROTeam {
-                      _type
-                      name
+                      ...on POROTeam {
+                        _type
+                        name
+                      }
                     }
                   }
                 }
@@ -2369,18 +2804,22 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 notes {
-                  id
-                  notable {
+                  nodes {
                     id
-                    ...on POROEmployee {
-                      firstName
-                      positions(filter: { active: { eq: true } }) {
-                        title
+                    notable {
+                      id
+                      ...on POROEmployee {
+                        firstName
+                        positions(filter: { active: { eq: true } }) {
+                          nodes {
+                            title
+                          }
+                        }
                       }
-                    }
-                    ...on POROTeam {
-                      _type
-                      name
+                      ...on POROTeam {
+                        _type
+                        name
+                      }
                     }
                   }
                 }
@@ -2395,18 +2834,22 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 notes {
-                  id
-                  notable {
+                  nodes {
                     id
-                    ...on POROEmployee {
-                      firstName
-                      positions(sort: [{ att: title, dir: asc }]) {
-                        title
+                    notable {
+                      id
+                      ...on POROEmployee {
+                        firstName
+                        positions(sort: [{ att: title, dir: asc }]) {
+                          nodes {
+                            title
+                          }
+                        }
                       }
-                    }
-                    ...on POROTeam {
-                      _type
-                      name
+                      ...on POROTeam {
+                        _type
+                        name
+                      }
                     }
                   }
                 }
@@ -2422,18 +2865,22 @@ RSpec.describe GraphitiGraphQL do
             json = run(%(
               query {
                 notes {
-                  id
-                  notable {
+                  nodes {
                     id
-                    ...on POROEmployee {
-                      firstName
-                      positions(page: { size: 1, number: 2 }) {
-                        title
+                    notable {
+                      id
+                      ...on POROEmployee {
+                        firstName
+                        positions(page: { size: 1, number: 2 }) {
+                          nodes {
+                            title
+                          }
+                        }
                       }
-                    }
-                    ...on POROTeam {
-                      _type
-                      name
+                      ...on POROTeam {
+                        _type
+                        name
+                      }
                     }
                   }
                 }
@@ -2456,9 +2903,13 @@ RSpec.describe GraphitiGraphQL do
         json = run(%(
           query {
             employees {
-              positions {
-                department {
-                  name
+              nodes {
+                positions {
+                  nodes {
+                    department {
+                      name
+                    }
+                  }
                 }
               }
             }
@@ -2466,9 +2917,178 @@ RSpec.describe GraphitiGraphQL do
         ))
         expect(json).to eq({
           errors: [{
-            message: "Query has depth of 4, which exceeds max depth of 2"
+            message: "Query has depth of 6, which exceeds max depth of 2"
           }]
         })
+      end
+    end
+
+    describe "statistics" do
+      context "when top-level" do
+        describe "built-in total count" do
+          it "works" do
+            json = run(%(
+              query {
+                employees {
+                  stats {
+                    total {
+                      count
+                    }
+                  }
+                }
+              }
+            ))
+            expect(json).to eq({
+              employees: {
+                stats: {
+                  total: {
+                    count: 2
+                  }
+                }
+              }
+            })
+          end
+        end
+
+        describe "when multiple stats and calculations requested" do
+          before do
+            resource.stat age: [:sum, :average]
+            schema!([resource])
+          end
+
+          it "works" do
+            json = run(%(
+              query {
+                employees {
+                  stats {
+                    total {
+                      count
+                    }
+                    age {
+                      sum
+                      average
+                    }
+                  }
+                }
+              }
+            ))
+            expect(json).to eq({
+              employees: {
+                stats: {
+                  total: {
+                    count: 2
+                  },
+                  age: {
+                    sum: employee1.age + employee2.age,
+                    average: ((employee1.age + employee2.age) / 2)
+                  }
+                }
+              }
+            })
+          end
+        end
+
+        context "when no nodes requested" do
+          it "automatically sends page[size]=0" do
+            schema!([resource])
+            expect(resource).to receive(:all).with(hash_including({
+              page: {size: 0}
+            })).and_call_original
+            json = run(%(
+              query {
+                employees {
+                  stats {
+                    total {
+                      count
+                    }
+                  }
+                }
+              }
+            ))
+          end
+
+          it "does not render nodes" do
+            json = run(%(
+              query {
+                employees {
+                  stats {
+                    total {
+                      count
+                    }
+                  }
+                }
+              }
+            ))
+            expect(json[:employees].keys).to eq([:stats])
+          end
+        end
+
+        context "when nodes also requested" do
+          it "works" do
+            json = run(%(
+              query {
+                employees {
+                  nodes {
+                    firstName
+                  }
+                  stats {
+                    total {
+                      count
+                    }
+                  }
+                }
+              }
+            ))
+            expect(json).to eq({
+              employees: {
+                nodes: [
+                  {firstName: "Stephen"},
+                  {firstName: "Agatha"}
+                ],
+                stats: {
+                  total: {
+                    count: 2
+                  }
+                }
+              }
+            })
+          end
+        end
+      end
+
+      context "when not top-level" do
+        # Eventually we should!
+        it "does not support statistics" do
+          json = run(%(
+            query {
+              employees {
+                nodes {
+                  positions {
+                    stats {
+                      total {
+                        count
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ))
+          expect(json).to eq({
+            errors: [
+              {
+                extensions: {
+                  code: "undefinedField",
+                  fieldName: "stats",
+                  typeName: "POROPositionConnection"
+                },
+                locations: [{column: 21, line: 6}],
+                message: "Field 'stats' doesn't exist on type 'POROPositionConnection'",
+                path: ["query", "employees", "nodes", "positions", "stats"]
+              }
+            ]
+          })
+        end
       end
     end
   end

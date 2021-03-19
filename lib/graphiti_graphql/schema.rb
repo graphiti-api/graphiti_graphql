@@ -132,11 +132,30 @@ module GraphitiGraphQL
 
     private
 
+    def generate_connection_type(resource, top_level: true)
+      name = "#{resource.graphql_class_name}#{top_level ? "TopLevel" : ""}Connection"
+      if registered = type_registry[name]
+        return registered[:type]
+      end
+
+      type = type_registry[resource.graphql_class_name][:type]
+      klass = Class.new(self.class.base_object)
+      klass.graphql_name(name)
+      klass.field :nodes,
+        [type],
+        "List #{resource.graphql_class_name(false).pluralize}",
+        null: false
+      if top_level
+        klass.field :stats, generate_stat_class(resource), null: false
+      end
+      register(name, klass)
+      klass
+    end
+
     def add_index(query_class, resource)
       field_name = resource.graphql_entrypoint.to_s.underscore.to_sym
       field = query_class.field field_name,
-        [type_registry[resource.graphql_class_name][:type]],
-        "List #{resource.graphql_class_name(false).pluralize}",
+        generate_connection_type(resource, top_level: true),
         null: false
       @query_fields[field_name] = resource
       define_arguments_for_sideload_field(field, resource)
@@ -147,7 +166,7 @@ module GraphitiGraphQL
       field = query_class.field field_name,
         type_registry[resource.graphql_class_name][:type],
         "Single #{resource.graphql_class_name(false).singularize}",
-        null: true
+        null: false
       @query_fields[field_name] = resource
       define_arguments_for_sideload_field field,
         resource,
@@ -238,6 +257,7 @@ module GraphitiGraphQL
           .name_for(filter_config[:type])
         type = GQL_TYPE_MAP[canonical_graphiti_type]
         required = !!filter_config[:required] && operator == "eq"
+        type = [type] unless !!filter_config[:single]
         klass.argument operator, type, required: required
       end
       klass
@@ -269,7 +289,11 @@ module GraphitiGraphQL
           type_registry[sideload.graphql_class_name][:type]
         end
 
-        gql_field_type = sideload.to_many? ? [gql_type] : gql_type
+        gql_field_type = if sideload.to_many?
+          generate_connection_type(sideload.resource, top_level: false)
+        else
+          gql_type
+        end
         field_name = name.to_s.camelize(:lower)
         unless type_class.fields[field_name]
           field = type_class.field field_name.to_sym,
@@ -277,7 +301,6 @@ module GraphitiGraphQL
             null: !sideload.to_many?
 
           # No sort/filter/paginate on belongs_to
-          # unless sideload.type.to_s.include?('belongs_to')
           unless sideload.type == :polymorphic_belongs_to
             define_arguments_for_sideload_field(field, sideload.resource)
           end
@@ -370,6 +393,25 @@ module GraphitiGraphQL
 
       add_relationships_to_type_class(klass, resource)
 
+      klass
+    end
+
+    def generate_stat_class(resource)
+      klass = Class.new(self.class.base_object)
+      klass.graphql_name "#{resource.graphql_class_name(false)}Stats"
+      resource.stats.each_pair do |name, calculations|
+        calc_class = generate_calc_class(resource, name, calculations)
+        klass.field name, calc_class, null: false
+      end
+      klass
+    end
+
+    def generate_calc_class(resource, stat_name, calculations)
+      klass = Class.new(self.class.base_object)
+      klass.graphql_name "#{resource.graphql_class_name(false)}#{stat_name}Calculations"
+      calculations.each do |calc|
+        klass.field calc, Float, null: false
+      end
       klass
     end
 

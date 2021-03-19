@@ -38,7 +38,7 @@ module GraphitiGraphQL
 
     def render(json, selection_name)
       payload = if find_one?(selection_name)
-        {selection_name.to_sym => json.values[0][0]}
+        {selection_name.to_sym => json.values[0][:nodes][0]}
       else
         json
       end
@@ -108,15 +108,19 @@ module GraphitiGraphQL
         gather_filters(params, selection, variables_hash, chained_name)
         gather_sorts(params, selection, variables_hash, chained_name)
         gather_pages(params, selection, variables_hash, chained_name)
+        gather_stats(params, selection, variables_hash, chained_name)
       end
 
       params[:include] ||= []
       params[:include] << chained_name if chained_name
 
-      fragments = selection.selections.select { |s|
+      nodes = selection.selections.find { |s| s.respond_to?(:name) && s.name == "nodes" }
+      children = nodes ? nodes.children : selection.selections
+
+      fragments = children.select { |s|
         s.is_a?(GraphQL::Language::Nodes::InlineFragment)
       }
-      non_fragments = selection.selections - fragments
+      non_fragments = children - fragments
 
       if pbt
         # Only id/_type possible here
@@ -297,6 +301,23 @@ module GraphitiGraphQL
       if pages.present?
         params[:page] ||= {}
         params[:page].merge!(pages)
+      end
+    end
+
+    def gather_stats(params, selection, variable_hash, chained_name = nil)
+      stats = selection.children.find { |c| c.name == "stats" }
+      nodes = selection.children.find { |c| c.name == "nodes" }
+
+      if stats
+        stat_param = {}
+        stats.children.each do |stat_node|
+          stat_name = stat_node.name
+          calculations = stat_node.children.map(&:name)
+          stat_param[stat_name.to_sym] = calculations.join(",")
+        end
+        stat_param = {chained_name => stat_param} if chained_name
+        params[:stats] = stat_param
+        params[:page] = {size: 0} unless nodes
       end
     end
   end

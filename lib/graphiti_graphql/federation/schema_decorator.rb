@@ -90,6 +90,22 @@ module GraphitiGraphQL
         federated_type
       end
 
+      def define_connection_type(name, type_class)
+        name = "#{name}FederatedConnection"
+        if (registered = type_registry[name])
+          return registered[:type]
+        end
+
+        klass = Class.new(@schema.class.base_object)
+        klass.graphql_name(name)
+        klass.field :nodes,
+          [type_class],
+          null: false,
+          extras: [:lookahead]
+        @schema.send :register, name, klass
+        klass
+      end
+
       def define_federated_has_many(type_class, relationship)
         local_name = GraphitiGraphQL::GraphitiSchema::Resource
           .gql_name(relationship.local_resource_class.name)
@@ -100,16 +116,20 @@ module GraphitiGraphQL
         local_interface = type_registry["I#{local_name}"]
         best_type = local_interface ? local_interface[:type] : local_type
 
-        field = type_class.field relationship.name,
-          [best_type],
-          null: false,
-          extras: [:lookahead]
+        connection_type = define_connection_type(local_name, best_type)
 
+        field = type_class.field relationship.name,
+          connection_type,
+          null: false,
+          connection: false
         @schema.send :define_arguments_for_sideload_field,
           field, @schema.graphiti_schema.get_resource(local_resource_name)
-        type_class.define_method relationship.name do |lookahead:, **arguments|
-          # TODO test params...do version of sort with array/symbol keys and plain string
-          params = arguments.as_json
+
+        type_class.define_method relationship.name do |**arguments|
+          {data: object, arguments: arguments}
+        end
+        connection_type.define_method :nodes do |lookahead:, **arguments|
+          params = object[:arguments].as_json
             .deep_transform_keys { |key| key.to_s.underscore.to_sym }
           selections = lookahead.selections.map(&:name)
           selections << relationship.foreign_key
@@ -122,7 +142,7 @@ module GraphitiGraphQL
 
           Federation::Loaders::HasMany
             .for(relationship, params)
-            .load(object[:id])
+            .load(object[:data][:id])
         end
       end
 
