@@ -1,0 +1,14 @@
+en:
+  graphiti:
+    description: "asdf"
+    resources:
+      poro/employee:
+        description: "my YML d3scription"
+        attributes:
+          foo:
+            description: Description from yml
+          extra_foo:
+            description: Extra description from yml
+        relationships:
+          positions:
+            description: position yml desc

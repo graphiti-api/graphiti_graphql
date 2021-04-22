@@ -318,7 +318,8 @@ module GraphitiGraphQL
         unless type_class.fields[field_name]
           field = type_class.field field_name.to_sym,
             gql_field_type,
-            null: !sideload.to_many?
+            null: !sideload.to_many?,
+            description: sideload.description
 
           # No sort/filter/paginate on belongs_to
           unless sideload.type == :polymorphic_belongs_to
@@ -363,6 +364,10 @@ module GraphitiGraphQL
         implement(klass, type_registry[implements])
       end
 
+      if resource.description
+        klass.description(resource.description)
+      end
+
       klass.field(:_type, String, null: false)
       resource.all_attributes.each do |name, config|
         if config[:readable]
@@ -371,7 +376,9 @@ module GraphitiGraphQL
           gql_type = String if name == :id
           # Todo document we don't have the concept, but can build it
           is_nullable = !(name == :id)
-          klass.field(name, gql_type, null: is_nullable)
+          opts = {null: is_nullable}
+          opts[:description] = config[:description] if config[:description]
+          klass.field(name, gql_type, opts)
         end
       end
 

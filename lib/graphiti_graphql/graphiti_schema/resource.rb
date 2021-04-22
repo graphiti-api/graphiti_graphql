@@ -55,6 +55,10 @@ module GraphitiGraphQL
         config[:remote]
       end
 
+      def description
+        config[:description]
+      end
+
       def remote?
         !!config[:remote]
       end

@@ -248,5 +248,146 @@ RSpec.describe GraphitiGraphQL::Schema do
         expect(fields).to_not have_key("remotePositions")
       end
     end
+
+    # TODO on attribute, on filter, on sort, etc
+    context "when there is a graphiti description" do
+      let!(:resource) do
+        Class.new(PORO::EmployeeResource) do
+          def self.name
+            "PORO::EmployeeResource"
+          end
+        end
+      end
+
+      def self.yml_setup
+        before do
+          @original = I18n.load_path
+          yml = "./support/locale/documentation_i18n.yml"
+          I18n.load_path = [File.expand_path(yml, __dir__)]
+          resource.attribute :foo, :string
+          resource.extra_attribute :extra_foo, :string
+          schema!([resource])
+        end
+
+        after do
+          I18n.load_path = @original
+        end
+      end
+
+      describe "on a resource" do
+        context "in-line" do
+          before do
+            resource.description = "my d3scription"
+            schema!([resource])
+          end
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
+            expect(employee_type.description).to eq("my d3scription")
+          end
+        end
+
+        context "via yml file" do
+          yml_setup
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
+            expect(employee_type.description).to eq("my YML d3scription")
+          end
+        end
+      end
+
+      describe "on a relationship" do
+        context "in-line" do
+          before do
+            resource.has_many :positions, description: "position inline desc"
+            schema!([resource])
+          end
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql
+              .types["POROEmployee"]
+            field = employee_type.fields["positions"]
+            expect(field.description).to eq("position inline desc")
+          end
+        end
+
+        context "via yml file" do
+          yml_setup
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql
+              .types["POROEmployee"]
+            field = employee_type.fields["positions"]
+            expect(field.description).to eq("position yml desc")
+          end
+        end
+      end
+
+      # describe "on a filter" do
+      #   context "in-line via resource" do
+      #   end
+      # end
+
+      # describe "on a sort" do
+      #   context "in-line via resource" do
+      #   end
+      # end
+
+      describe "on an attribute" do
+        context "in-line" do
+          before do
+            resource.attribute :foo, :string, description: "my description"
+            schema!([resource])
+          end
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
+            expect(employee_type.fields["foo"].description)
+              .to eq("my description")
+          end
+        end
+
+        context "via yml" do
+          yml_setup
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql.types["POROEmployee"]
+            expect(employee_type.fields["foo"].description)
+              .to eq("Description from yml")
+          end
+        end
+      end
+
+      describe "on an extra_attribute" do
+        context "in-line" do
+          before do
+            resource.extra_attribute \
+              :extra_foo,
+              :string,
+              description: "my extra description"
+            schema!([resource])
+          end
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql
+              .types["POROEmployee"]
+            expect(employee_type.fields["extraFoo"].description)
+              .to eq("my extra description")
+          end
+        end
+
+        context "via yml" do
+          yml_setup
+
+          it "is present in the GQL schema" do
+            employee_type = GraphitiGraphQL.schemas.graphql
+              .types["POROEmployee"]
+            expect(employee_type.fields["extraFoo"].description)
+              .to eq("Extra description from yml")
+          end
+        end
+      end
+    end
   end
 end

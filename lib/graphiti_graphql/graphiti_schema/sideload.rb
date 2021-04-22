@@ -25,6 +25,10 @@ module GraphitiGraphQL
         config[:type].to_sym
       end
 
+      def description
+        config[:description]
+      end
+
       def resource_name
         config[:resource]
       end
