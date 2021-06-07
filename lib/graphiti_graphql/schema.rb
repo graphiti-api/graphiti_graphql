@@ -436,7 +436,7 @@ module GraphitiGraphQL
     end
 
     def registered?(resource)
-      name = resource.graphql_class_name(false)
+      name = resource.graphql_class_name(true)
       !!type_registry[name]
     end
 
