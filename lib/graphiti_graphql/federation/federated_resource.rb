@@ -21,6 +21,18 @@ module GraphitiGraphQL
           @relationships[name].instance_eval(&blk)
         end
       end
+
+      def polymorphic?
+        @type_name.is_a?(Hash)
+      end
+
+      def klass_name
+        if polymorphic?
+          "I#{@relationships.keys[0].to_s.camelize}"
+        else
+          @type_name
+        end
+      end
     end
   end
 end

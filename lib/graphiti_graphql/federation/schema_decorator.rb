@@ -66,19 +66,39 @@ module GraphitiGraphQL
           pre_registered = !!type_registry[federated_resource.type_name]
           type_class = if pre_registered
             type_registry[federated_resource.type_name][:type]
+          elsif federated_resource.polymorphic?
+            add_federated_resource_interface(federated_resource)
           else
-            add_federated_resource_type(federated_resource.type_name)
+            add_federated_resource_type(federated_resource.klass_name)
           end
 
           yield type_class, federated_resource
         end
       end
 
-      def add_federated_resource_type(klass_name)
+      def add_federated_resource_interface(federated_resource)
+        interface = define_polymorphic_federated_resource_interface(federated_resource.klass_name)
+        federated_resource.type_name.values.each do |name|
+          add_federated_resource_type(name, interface: interface)
+        end
+        interface
+      end
+
+      def define_polymorphic_federated_resource_interface(klass_name)
+        interface = Module.new
+        interface.send(:include, @schema.class.base_interface)
+        interface.graphql_name(klass_name)
+        interface.field :id, String, null: false, external: true
+        type_registry[klass_name] = {type: interface, interface: true}
+        interface
+      end
+
+      def add_federated_resource_type(klass_name, interface: nil)
         federated_type = Class.new(@schema.class.base_object)
         federated_type.graphql_name klass_name
         federated_type.key(fields: "id")
         federated_type.extend_type
+        federated_type.implements(interface) if interface
         federated_type.field :id, String, null: false, external: true
         federated_type.class_eval do
           def self.resolve_reference(reference, _context, _lookup)
@@ -161,7 +181,7 @@ module GraphitiGraphQL
 
         local_types.each do |local|
           local.field relationship.name,
-            type_registry[federated_resource.type_name][:type],
+            type_registry[federated_resource.klass_name][:type],
             null: true
         end
       end

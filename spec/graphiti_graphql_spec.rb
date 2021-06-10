@@ -2712,6 +2712,25 @@ RSpec.describe GraphitiGraphQL do
           notable_type: "PORO::Team",
           notable_id: team.id
       end
+      let(:note_resource) do
+        Class.new(PORO::NoteResource) do
+          def self.name
+            "PORO::NoteResource"
+          end
+          polymorphic_belongs_to :notable do
+            group_by(:notable_type) do
+              on(:"PORO::Employee")
+                .belongs_to :employee, resource: PORO::EmployeeResource
+              on(:"PORO::Team")
+                .belongs_to :team, resource: PORO::TeamResource
+            end
+          end
+        end
+      end
+
+      before do
+        schema!([note_resource])
+      end
 
       it "works" do
         json = run(%(

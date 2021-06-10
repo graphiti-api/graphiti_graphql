@@ -234,7 +234,7 @@ module PORO
   end
 
   class Note < Base
-    attr_accessor :body, :notable, :notable_id, :notable_type, :edits
+    attr_accessor :body, :notable, :notable_id, :notable_type, :edits, :n_id, :n_type
   end
 
   class NoteEdit < Base
@@ -515,15 +515,6 @@ module PORO
     filter :notable_type, :string
 
     has_many :edits, resource: PORO::NoteEditResource
-
-    polymorphic_belongs_to :notable do
-      group_by(:notable_type) do
-        on(:"PORO::Employee")
-          .belongs_to :employee, resource: PORO::EmployeeResource
-        on(:"PORO::Team")
-          .belongs_to :team, resource: PORO::TeamResource
-      end
-    end
   end
 
   class BioResource < ApplicationResource

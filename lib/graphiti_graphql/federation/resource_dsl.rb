@@ -64,18 +64,30 @@ module GraphitiGraphQL
         # * Add to the list of external graphql-ruby types we need in schema
         # * Add a gql-specific attribute to the serializer that gives apollo
         #   the representation it needs.
-        def federated_belongs_to(name, type: nil, foreign_key: nil)
+        def federated_belongs_to(name, type: nil, foreign_key: nil, foreign_type: nil)
           type ||= name.to_s.camelize
           foreign_key ||= :"#{name.to_s.underscore}_id"
           resource = FederatedResource.new(type)
           federated_resources << resource
           resource.add_relationship(:belongs_to, name, self, foreign_key)
 
+          foreign_type ||= :"#{name.to_s.underscore}_type" if resource.polymorphic?
+
           opts = {readable: :gql?, only: [:readable], schema: false}
           attribute name, :hash, opts do
             prc = self.class.attribute_blocks[foreign_key]
             fk = prc ? instance_eval(&prc) : @object.send(foreign_key)
-            {__typename: type, id: fk.to_s}
+
+            typename = type
+            if resource.polymorphic?
+              prc = self.class.attribute_blocks[foreign_type]
+              ft = prc ? instance_eval(&prc) : @object.send(foreign_type)
+              typename = type[ft]
+            end
+
+            if fk && typename.present?
+              {__typename: typename, id: fk.to_s}
+            end
           end
         end
       end

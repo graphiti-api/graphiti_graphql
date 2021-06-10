@@ -1617,6 +1617,32 @@ RSpec.describe GraphitiGraphQL::Federation do
       ])
     end
 
+    context "when nil foreign key" do
+      # other_emp_id is nil
+      let!(:position2) { PORO::Position.create(other_employee_id: rand(999)) }
+
+      before do
+        position_resource.federated_belongs_to :other_emp
+        schema!([position_resource])
+      end
+
+      it "renders null" do
+        json = run(%(
+          query {
+            positions {
+              nodes {
+                otherEmp {
+                  __typename
+                  id
+                }
+              }
+            }
+          }
+        ))
+        expect(json[:positions][:nodes][1][:otherEmp]).to be_nil
+      end
+    end
+
     context "with custom foreign key" do
       it "is correctly referenced" do
         allow_any_instance_of(PORO::Position).to receive(:my_fk) { 9876 }
@@ -1777,6 +1803,196 @@ RSpec.describe GraphitiGraphQL::Federation do
             }]
           }
         })
+      end
+    end
+  end
+
+  describe "federated polymorphic belongs_to" do
+    let(:note_resource) do
+      Class.new(PORO::NoteResource) do
+        include GraphitiGraphQL::Federation
+        def self.name
+          "PORO::NoteResource"
+        end
+      end
+    end
+
+    let(:department_resource) do
+      Class.new(PORO::DepartmentResource) do
+        include GraphitiGraphQL::Federation
+        def self.name
+          "PORO::DepartmentResource"
+        end
+      end
+    end
+  
+    let!(:employee1) { PORO::Employee.create(first_name: "Jane") }
+    let!(:employee2) { PORO::Employee.create(first_name: "June") }
+    let!(:department) { PORO::Department.create(name: "dept") }
+
+    let!(:note1) do
+      PORO::Note.create \
+        body: "foo",
+        notable_id: employee2.id,
+        n_id: employee1.id,
+        notable_type: "E"
+    end
+
+    let!(:note2) do
+      PORO::Note.create \
+        body: "bar",
+        notable_id: department.id,
+        notable_type: "D"
+    end
+  
+    it "can query the reference attribute" do
+      note_resource.federated_belongs_to :notable,
+        type: {"E" => "POROEmployee", "D" => "PORODepartment"}
+      schema!([note_resource])
+      json = run(%(
+        query {
+          notes {
+            nodes {
+              notable {
+                __typename
+                id
+              }
+            }
+          }
+        }
+      ))
+      expect(json).to eq({
+        notes: {
+          nodes: [
+            {
+              notable: {
+                __typename: "POROEmployee",
+                id: employee2.id.to_s
+              }
+            },
+            {
+              notable: {
+                __typename: "PORODepartment",
+                id: department.id.to_s
+              }
+            }
+          ]
+        }
+      })
+    end
+
+    context "when given explicit foreign key" do
+      before do
+        note_resource.federated_belongs_to :notable,
+          foreign_key: :n_id,
+          type: {"E" => "POROEmployee", "D" => "PORODepartment"}
+        schema!([note_resource])
+      end
+
+      it "renders correctly" do
+        json = run(%(
+          query {
+            notes {
+              nodes {
+                notable {
+                  __typename
+                  id
+                }
+              }
+            }
+          }
+        ))
+        expect(json).to eq({
+          notes: {
+            nodes: [
+              {
+                notable: {
+                  __typename: "POROEmployee",
+                  id: employee1.id.to_s
+                }
+              },
+              {
+                notable: nil
+              }
+            ]
+          }
+        })
+      end
+    end
+
+    context "when given explicit foreign type" do
+      let!(:department2) { PORO::Department.create }
+
+      let!(:note3) do
+        PORO::Note.create \
+          notable_id: department2.id,
+          notable_type: "E",
+          n_type: "D"
+      end
+
+      before do
+        note_resource.federated_belongs_to :notable,
+          foreign_type: :n_type,
+          type: {"E" => "POROEmployee", "D" => "PORODepartment"}
+        schema!([note_resource])
+      end
+
+      it "renders correctly" do
+        json = run(%(
+          query {
+            notes {
+              nodes {
+                notable {
+                  __typename
+                  id
+                }
+              }
+            }
+          }
+        ))
+        expect(json).to eq({
+          notes: {
+            nodes: [
+              {
+                notable: nil
+              },
+              {
+                notable: nil
+              },
+              notable: {
+                __typename: "PORODepartment",
+                id: department2.id.to_s
+              }
+            ]
+          }
+        })
+      end
+    end
+
+    context "when foreign key is present, but not foreign type" do
+      let!(:department2) { PORO::Department.create }
+      let!(:note3) { PORO::Note.create(notable_id: department2.id) }
+
+      before do
+        note_resource.federated_belongs_to :notable,
+          type: {"E" => "POROEmployee", "D" => "PORODepartment"}
+        schema!([note_resource])
+      end
+
+      it "renders null" do
+        json = run(%(
+          query {
+            notes {
+              nodes {
+                notable {
+                  __typename
+                  id
+                }
+              }
+            }
+          }
+        ))
+        expect(json[:notes][:nodes][2][:notable]).to be_nil
       end
     end
   end

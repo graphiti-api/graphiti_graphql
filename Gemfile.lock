@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    graphiti_graphql (0.1.2)
+    graphiti_graphql (0.1.4)
       activesupport (>= 4.1)
       graphiti (>= 1.2.36)
       graphql (~> 1.12)
@@ -137,4 +137,4 @@ DEPENDENCIES
   standardrb
 
 BUNDLED WITH
-   2.0.2
+   2.2.16
