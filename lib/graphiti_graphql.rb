@@ -13,7 +13,7 @@ require "graphiti_graphql/util"
 
 module GraphitiGraphQL
   class Configuration
-    attr_accessor :schema_reloading
+    attr_accessor :schema_reloading, :federation_application_controller
 
     def initialize
       self.schema_reloading = true
@@ -72,6 +72,10 @@ module GraphitiGraphQL
 
   def self.config
     @config ||= Configuration.new
+  end
+
+  def self.configure
+    yield config
   end
 
   def self.schemas
