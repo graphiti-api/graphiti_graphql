@@ -948,6 +948,101 @@ RSpec.describe GraphitiGraphQL::Federation do
               nodes = entities.map { |e| e[:employees][:nodes] }
               expect(nodes[0]).to eq([{id: employee4.id.to_s}])
             end
+
+            context "via after" do
+              it "works" do
+                resource.federated_type("OtherPosition").has_many :employees
+                schema!([resource])
+
+                cursor = Base64.encode64({offset: 1}.to_json)
+                json = run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees(after: "#{cursor}") {
+                          nodes {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    }
+                  ]
+                })
+                nodes = json[:_entities][0][:employees][:nodes]
+                expect(nodes.length).to eq(1)
+                expect(nodes[0][:id]).to eq(employee4.id.to_s)
+              end
+            end
+
+            context "via 'before'" do
+              it "works" do
+                resource.federated_type("OtherPosition").has_many :employees
+                schema!([resource])
+
+                cursor = Base64.encode64({offset: 2}.to_json)
+                json = run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees(before: "#{cursor}", page: { size: 1 }) {
+                          nodes {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    }
+                  ]
+                })
+                nodes = json[:_entities][0][:employees][:nodes]
+                expect(nodes.length).to eq(1)
+                expect(nodes[0][:id]).to eq(employee1.id.to_s)
+              end
+            end
+
+            context "via 'first'" do
+              it "works" do
+                resource.federated_type("OtherPosition").has_many :employees
+                schema!([resource])
+
+                json = run(%(
+                  query($representations:[_Any!]!) {
+                    _entities(representations:$representations) {
+                      ...on OtherPosition {
+                        employees(first: 1) {
+                          nodes {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                ), {
+                  "representations" => [
+                    {
+                      "__typename" => "OtherPosition",
+                      "id" => employee1.other_position_id.to_s
+                    }
+                  ]
+                })
+                nodes = json[:_entities][0][:employees][:nodes]
+                expect(nodes.length).to eq(1)
+                expect(nodes[0][:id]).to eq(employee1.id.to_s)
+              end
+            end
           end
 
           context "when from multiple parent nodes" do

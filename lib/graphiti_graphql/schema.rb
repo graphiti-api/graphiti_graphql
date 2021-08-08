@@ -93,6 +93,7 @@ module GraphitiGraphQL
       query_class = Class.new(existing_query || self.class.base_object)
       # NB MUST be Query or federation-ruby will break things
       query_class.graphql_name "Query"
+      query_class.field_class BaseField
 
       get_entrypoints(entrypoint_resources).each do |resource|
         next if resource.remote?
@@ -145,20 +146,44 @@ module GraphitiGraphQL
         [type],
         "List #{resource.graphql_class_name(false).pluralize}",
         null: false
+
+      # Stats currently only supported on top level
       if top_level
+        klass.field :page_info, PageInfoType, null: false
         klass.field :stats, generate_stat_class(resource), null: false
       end
       register(name, klass)
       klass
     end
 
+    # def edge_type(name, type)
+    #   if (registered = type_registry[name])
+    #     return registered[:type]
+    #   end
+
+    #   klass = Class.new(BaseObject) do
+    #     graphql_name "#{name}Edge"
+    #     field :cursor, String, null: false
+    #     field :node, type, null: false
+    #   end
+    #   type_registry[name] = {type: klass}
+    #   klass
+    # end
+
     def add_index(query_class, resource)
       field_name = resource.graphql_entrypoint.to_s.underscore.to_sym
       field = query_class.field field_name,
         generate_connection_type(resource, top_level: true),
-        null: false
+        null: false,
+        connection: false
       @query_fields[field_name] = resource
       define_arguments_for_sideload_field(field, resource)
+    end
+
+    def apply_connection_args(field)
+      field.argument :after, "String", "Cursor to paginate after", required: false
+      field.argument :before, "String", "Cursor to paginate before", required: false
+      field.argument :first, "Int", "Same as page.size", required: false
     end
 
     def add_show(query_class, resource)
@@ -222,6 +247,7 @@ module GraphitiGraphQL
           field.argument :sort, [sort_type], required: false
         end
         field.argument :page, PageType, required: false
+        apply_connection_args(field)
 
         unless resource.filters.empty?
           filter_type = generate_filter_type(field, resource)
@@ -375,6 +401,8 @@ module GraphitiGraphQL
         end
       end
 
+      klass.field :_cursor, String, null: false
+
       register(type_name, klass, resource, poly_parent)
 
       resource.sideloads.each_pair do |name, sideload|
@@ -480,6 +508,16 @@ module GraphitiGraphQL
       graphql_name "Page"
       argument :size, Int, required: false
       argument :number, Int, required: false
+      argument :after, String, required: false
+      argument :before, String, required: false
+    end
+
+    class PageInfoType < BaseObject
+      graphql_name "PageInfo"
+      field :has_next_page, Boolean, null: false
+      field :has_previous_page, Boolean, null: false
+      field :start_cursor, String, null: false
+      field :end_cursor, String, null: false
     end
 
     class SortDirType < GraphQL::Schema::Enum

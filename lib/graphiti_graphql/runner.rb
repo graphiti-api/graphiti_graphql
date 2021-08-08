@@ -282,11 +282,23 @@ module GraphitiGraphQL
     def gather_pages(params, selection, variable_hash, chained_name = nil)
       pages = {}.tap do |p|
         selection.arguments.each do |arg|
-          if arg.name == "page"
+          if ["page", "first", "after", "before"].include?(arg.name)
             value = if arg.value.respond_to?(:name) # is a variable
-              variable_hash[arg.value.name].to_h
+              variable_hash[arg.value.name]
             else
-              arg.value.to_h
+              arg.value
+            end
+
+            next unless value
+
+            value = if arg.name == "first"
+              {size: value}
+            elsif arg.name == "after"
+              {after: value}
+            elsif arg.name == "before"
+              {before: value}
+            else
+              value.to_h
             end
 
             if chained_name
@@ -303,6 +315,13 @@ module GraphitiGraphQL
       if pages.present?
         params[:page] ||= {}
         params[:page].merge!(pages)
+      end
+
+      (selection.try(:selections) || []).each do |sub|
+        if sub.try(:name) == "pageInfo"
+          params[:fields] ||= {}
+          params[:fields][:page_info] = sub.selections.map(&:name).map(&:underscore).join(",")
+        end
       end
     end
 

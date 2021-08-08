@@ -1704,6 +1704,435 @@ RSpec.describe GraphitiGraphQL do
         end
       end
 
+      # TODO:
+      # first, last instead of page arg
+      # Avoid Connection type if not fully supporting args
+      # perhaps totalCount
+      # omit edges
+      #
+      #
+      # todo: ($after or $size instead of $page var. For filter etc as well?)
+      # MUST give page size for before cursor?
+      context "via cursor" do
+        def decode(cursor)
+          JSON.parse(Base64.decode64(cursor)).symbolize_keys
+        end
+
+        it "can render the cursor" do
+          json = run(%(
+            query {
+              employees {
+                nodes {
+                  id
+                  _cursor
+                }
+              }
+            }
+          ))
+
+          nodes = json[:employees][:nodes]
+          expect(decode(nodes[0][:_cursor])).to eq(offset: 1)
+          expect(decode(nodes[1][:_cursor])).to eq(offset: 2)
+          expect(decode(nodes[2][:_cursor])).to eq(offset: 3)
+        end
+
+        describe "pageInfo" do
+          describe "hasNextPage" do
+            context "when no next page" do
+              it "is false" do
+                json = run(%(
+                  query {
+                    employees {
+                      pageInfo {
+                        hasNextPage
+                      }
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                ))
+                expect(json[:employees][:pageInfo][:hasNextPage]).to eq(false)
+              end
+            end
+
+            context "when there is a next page" do
+              it "is true" do
+                json = run(%(
+                  query {
+                    employees(page: { size: 1 }) {
+                      pageInfo {
+                        hasNextPage
+                      }
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                ))
+                expect(json[:employees][:pageInfo][:hasNextPage]).to eq(true)
+              end
+            end
+          end
+
+          describe "hasPreviousPage" do
+            context "when there is a previous page" do
+              it "is true" do
+                json = run(%(
+                  query {
+                    employees(page: { size: 1, number: 2 }) {
+                      pageInfo {
+                        hasPreviousPage
+                      }
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                ))
+                expect(json[:employees][:pageInfo][:hasPreviousPage]).to eq(true)
+              end
+            end
+
+            context "when there is no previous page" do
+              it "is false" do
+                json = run(%(
+                  query {
+                    employees {
+                      pageInfo {
+                        hasPreviousPage
+                      }
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                ))
+                expect(json[:employees][:pageInfo][:hasPreviousPage]).to eq(false)
+              end
+            end
+          end
+
+          describe "startCursor" do
+            it "works" do
+              json = run(%(
+                query {
+                  employees(page: { size: 1, number: 2 }) {
+                    pageInfo {
+                      startCursor
+                    }
+                    nodes {
+                      id
+                    }
+                  }
+                }
+              ))
+              start = json[:employees][:pageInfo][:startCursor]
+              expect(JSON.parse(Base64.decode64(start))).to eq({"offset" => 2})
+            end
+          end
+
+          describe "endCursor" do
+            it "works" do
+              json = run(%(
+                query {
+                  employees {
+                    pageInfo {
+                      endCursor
+                    }
+                    nodes {
+                      id
+                    }
+                  }
+                }
+              ))
+              end_cursor = json[:employees][:pageInfo][:endCursor]
+              expect(JSON.parse(Base64.decode64(end_cursor)))
+                .to eq({"offset" => 3})
+            end
+          end
+        end
+
+        def run_cursor_queries(index)
+          json = run(%(
+            query {
+              employees {
+                nodes {
+                  id
+                  _cursor
+                }
+              }
+            }
+          ))
+          cursor = json[:employees][:nodes][index][:_cursor]
+          params = yield cursor
+
+          json = run(%(
+            query Cursor($page: Page, $after: String, $before: String, $first: Int) {
+              employees(page: $page, after: $after, before: $before, first: $first) {
+                nodes {
+                  id
+                  _cursor
+                }
+              }
+            }
+          ), params)
+          json[:employees][:nodes]
+        end
+
+        shared_examples "after cursor" do |nested|
+          it "works" do
+            nodes = run_cursor_queries(0) { |c|
+              payload = {after: c}
+              payload = {page: payload} if nested
+              payload
+            }
+            expect(nodes.map { |n| n[:id] })
+              .to eq([employee2.id.to_s, employee3.id.to_s])
+          end
+
+          context "and page size" do
+            it "works" do
+              nodes = run_cursor_queries(0) { |c|
+                payload = {after: c}
+                payload = {page: payload} if nested
+                payload[:page] ||= {}
+                payload[:page][:size] = 1
+                payload
+              }
+              expect(nodes.map { |n| n[:id] })
+                .to eq([employee2.id.to_s])
+            end
+          end
+
+          context "and page number" do
+            it "works" do
+              nodes = run_cursor_queries(0) { |c| 
+                payload = {after: c}
+                payload = {page: payload} if nested
+                payload[:page] ||= {}
+                payload[:page][:size] = 1
+                payload[:page][:number] = 2
+                payload
+              }
+              expect(nodes.map { |n| n[:id] })
+                .to eq([employee3.id.to_s])
+            end
+          end
+        end
+
+        context "when given page.after cursor" do
+          include_examples "after cursor", true
+        end
+
+        context "when given after cursor" do
+          include_examples "after cursor", false
+
+          context "on a relationship" do
+            let!(:position1) do
+              PORO::Position.create(employee_id: employee1.id)
+            end
+            let!(:position2) do
+              PORO::Position.create(employee_id: employee1.id)
+            end
+            let!(:position3) do
+              PORO::Position.create(employee_id: employee1.id)
+            end
+
+            it "works" do
+              json = run(%(
+                query {
+                  employees(first: 1) {
+                    nodes {
+                      positions {
+                        nodes {
+                          _cursor
+                        }
+                      }
+                    }
+                  }
+                }
+              ))
+              nodes = json[:employees][:nodes][0][:positions][:nodes]
+              expect(nodes.length).to eq(3)
+              cursor = nodes[0][:_cursor]
+              json = run(%(
+                query {
+                  employees(first: 1) {
+                    nodes {
+                      positions(after: "#{cursor}") {
+                        nodes {
+                          id
+                          _cursor
+                        }
+                      }
+                    }
+                  }
+                }
+              ))
+              nodes = json[:employees][:nodes][0][:positions][:nodes]
+              expect(nodes.length).to eq(2)
+              expect(nodes[0][:id]).to eq(position2.id.to_s)
+              expect(nodes[1][:id]).to eq(position3.id.to_s)
+            end
+          end
+        end
+
+        shared_examples "before cursor" do |nested|
+          context "and page size" do
+            it "works" do
+              nodes = run_cursor_queries(2) { |c|
+                payload = {before: c}
+                payload = {page: payload} if nested
+                payload[:page] ||= {}
+                payload[:page][:size] = 2
+                payload
+              }
+              expect(nodes.map { |n| n[:id] })
+                .to eq([employee1.id.to_s, employee2.id.to_s])
+            end
+          end
+
+          context "and 'first'" do
+            it "works" do
+              nodes = run_cursor_queries(2) { |c|
+                {before: c, first: 2}
+              }
+              expect(nodes.map { |n| n[:id] })
+                .to eq([employee1.id.to_s, employee2.id.to_s])
+            end
+          end
+        end
+
+        context "when given page.before cursor" do
+          include_examples "before cursor", true
+        end
+
+        context "when given before cursor" do
+          include_examples "before cursor", false
+
+          context "on a relationship" do
+            let!(:position1) do
+              PORO::Position.create(employee_id: employee1.id)
+            end
+            let!(:position2) do
+              PORO::Position.create(employee_id: employee1.id)
+            end
+            let!(:position3) do
+              PORO::Position.create(employee_id: employee1.id)
+            end
+
+            it "works" do
+              json = run(%(
+                query {
+                  employees(first: 1) {
+                    nodes {
+                      positions {
+                        nodes {
+                          _cursor
+                        }
+                      }
+                    }
+                  }
+                }
+              ))
+              cursor = json[:employees][:nodes][0][:positions][:nodes][1][:_cursor]
+              json = run(%(
+                query {
+                  employees(first: 1) {
+                    nodes {
+                      positions(before: "#{cursor}", page: { size: 1 }) {
+                        nodes {
+                          id
+                          _cursor
+                        }
+                      }
+                    }
+                  }
+                }
+              ))
+              nodes = json[:employees][:nodes][0][:positions][:nodes]
+              expect(nodes.length).to eq(1)
+              expect(nodes.first[:id]).to eq(position1.id.to_s)
+            end
+          end
+        end
+      end
+
+      context "via 'first' argument" do
+        context "when inline query" do
+          it "works like page size" do
+            json = run(%(
+              query {
+                employees(first: 2) {
+                  nodes {
+                    id
+                    _cursor
+                  }
+                }
+              }
+            ))
+            expect(json[:employees][:nodes].length).to eq(2)
+          end
+        end
+
+        context "when passed as variable" do
+          it "works like page size" do
+            json = run(%(
+              query($first: Int) {
+                employees(first: $first) {
+                  nodes {
+                    id
+                    _cursor
+                  }
+                }
+              }
+            ), {"first" => 2})
+            expect(json[:employees][:nodes].length).to eq(2)
+          end
+        end
+
+        context "when on a relationship" do
+          let!(:position1) { PORO::Position.create(employee_id: employee1.id) }
+          let!(:position2) { PORO::Position.create(employee_id: employee1.id) }
+          let!(:position3) { PORO::Position.create(employee_id: employee1.id) }
+
+          it "works" do
+            json = run(%(
+              query {
+                employees(first: 1) {
+                  nodes {
+                    positions(first: 2) {
+                      nodes {
+                        id
+                        _cursor
+                      }
+                    }
+                  }
+                }
+              }
+            ))
+            nodes = json[:employees][:nodes][0][:positions][:nodes]
+            expect(nodes.length).to eq(2)
+          end
+        end
+      end
+
+      it "does not accept 'last' argument" do
+        json = run(%(
+          query {
+            employees(last: 2) {
+              nodes {
+                id
+                _cursor
+              }
+            }
+          }
+        ))
+        expect(json[:errors][0][:message])
+          .to eq("Field 'employees' doesn't accept argument 'last'")
+      end
+
       context "on relationship" do
         let!(:position1) do
           PORO::Position.create(title: "One", employee_id: employee1.id)
@@ -1768,6 +2197,98 @@ RSpec.describe GraphitiGraphQL do
                   }]
                 }
               })
+            end
+
+            context "via 'after' cursor" do
+              context "nested" do
+                it "works" do
+                  json = run(%|
+                    query getEmployees {
+                      employees(page: { size: 1 }) {
+                        nodes {
+                          positions {
+                            nodes {
+                              title
+                              _cursor
+                            }
+                          }
+                        }
+                      }
+                    }
+                  |)
+                  cursor = json[:employees][:nodes][0][:positions][:nodes][0][:_cursor]
+
+                  json = run(%|
+                    query getEmployees($page: Page) {
+                      employees(page: { size: 1 }) {
+                        nodes {
+                          positions(page: $page) {
+                            nodes {
+                              title
+                            }
+                          }
+                        }
+                      }
+                    }
+                  |, {"page" => {"after" => cursor}})
+                  expect(json).to eq({
+                    employees: {
+                      nodes: [{
+                        positions: {
+                          nodes: [{
+                            title: "Two"
+                          }]
+                        }
+                      }]
+                    }
+                  })
+                end
+              end
+
+              context "not nested" do
+                it "works" do
+                  json = run(%|
+                    query getEmployees {
+                      employees(first: 1) {
+                        nodes {
+                          positions {
+                            nodes {
+                              title
+                              _cursor
+                            }
+                          }
+                        }
+                      }
+                    }
+                  |)
+                  cursor = json[:employees][:nodes][0][:positions][:nodes][0][:_cursor]
+
+                  json = run(%|
+                    query getEmployees($after: String) {
+                      employees(first: 1) {
+                        nodes {
+                          positions(after: $after) {
+                            nodes {
+                              title
+                            }
+                          }
+                        }
+                      }
+                    }
+                  |, {"after" => cursor})
+                  expect(json).to eq({
+                    employees: {
+                      nodes: [{
+                        positions: {
+                          nodes: [{
+                            title: "Two"
+                          }]
+                        }
+                      }]
+                    }
+                  })
+                end
+              end
             end
           end
         end

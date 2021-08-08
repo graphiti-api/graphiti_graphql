@@ -15,6 +15,19 @@ module GraphitiGraphQL
 
           @federated_relationship.params_block&.call(@params)
 
+          if (first = @params.delete(:first))
+            @params[:page] ||= {}
+            @params[:page][:size] = first
+          end
+          if (after = @params.delete(:after))
+            @params[:page] ||= {}
+            @params[:page][:after] = after
+          end
+          if (before = @params.delete(:before))
+            @params[:page] ||= {}
+            @params[:page][:before] = before
+          end
+
           if ids.length > 1 && @params[:page]
             raise Graphiti::Errors::UnsupportedPagination
           elsif !@params[:page]
