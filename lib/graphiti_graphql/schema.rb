@@ -505,7 +505,7 @@ module GraphitiGraphQL
     end
 
     class PageType < GraphQL::Schema::InputObject
-      graphql_name "Page"
+      graphql_name "PageInput"
       argument :size, Int, required: false
       argument :number, Int, required: false
       argument :after, String, required: false
@@ -516,8 +516,8 @@ module GraphitiGraphQL
       graphql_name "PageInfo"
       field :has_next_page, Boolean, null: false
       field :has_previous_page, Boolean, null: false
-      field :start_cursor, String, null: false
-      field :end_cursor, String, null: false
+      field :start_cursor, String, null: true
+      field :end_cursor, String, null: true
     end
 
     class SortDirType < GraphQL::Schema::Enum

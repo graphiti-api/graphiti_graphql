@@ -64,7 +64,6 @@ module GraphitiGraphQL
     end
 
     initializer "graphiti_graphql.define_controller" do
-      GraphitiGraphQL::Engine.reloader_class.to_prepare do
         app_controller = GraphitiGraphQL.config.federation_application_controller || ::ApplicationController
         # rubocop:disable Lint/ConstantDefinitionInBlock(Standard)
         class GraphitiGraphQL::ExecutionController < app_controller
@@ -74,7 +73,6 @@ module GraphitiGraphQL
             render json: Graphiti.gql(params[:query], params[:variables])
           end
         end
-      end
     end
 
     initializer "graphiti_graphql.federation" do
