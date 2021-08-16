@@ -103,6 +103,7 @@ module GraphitiGraphQL
       end
 
       get_entrypoints(entrypoint_resources).each do |resource|
+        next if resource.remote?
         add_index(query_class, resource)
         add_show(query_class, resource)
       end
