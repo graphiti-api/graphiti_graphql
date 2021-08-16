@@ -95,10 +95,14 @@ module GraphitiGraphQL
       query_class.graphql_name "Query"
       query_class.field_class BaseField
 
-      get_entrypoints(entrypoint_resources).each do |resource|
+      # Ensure all types are generated, even if they aren't in a top-level Query
+      # We might now want to expose the query, but do want to federate the Type
+      graphiti_schema.resources.each do |resource|
         next if resource.remote?
         generate_type(resource)
+      end
 
+      get_entrypoints(entrypoint_resources).each do |resource|
         add_index(query_class, resource)
         add_show(query_class, resource)
       end
