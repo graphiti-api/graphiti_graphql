@@ -52,14 +52,18 @@ module GraphitiGraphQL
       @base_interface || BaseInterface
     end
 
-    def self.generate(entrypoint_resources = nil)
+    def self.generate(resources: nil, entrypoints: nil)
       instance = new
       schema = Class.new(::GraphitiGraphQL.schema_class || GraphQL::Schema)
       graphiti_schema = GraphitiGraphQL::GraphitiSchema::Wrapper
         .new(Graphiti::Schema.generate)
       instance.graphiti_schema = graphiti_schema
+
+      resources ||= graphiti_schema.resources
+      entrypoints ||= self.entrypoints || resources
+
       instance.schema = schema
-      instance.apply_query(entrypoint_resources || entrypoints)
+      instance.apply_query(resources, entrypoints)
       instance
     end
 
@@ -72,8 +76,8 @@ module GraphitiGraphQL
       @query_fields = {}
     end
 
-    def apply_query(entries)
-      query_type = generate_schema_query(entries)
+    def apply_query(resources, entrypoints)
+      query_type = generate_schema_query(resources, entrypoints)
       Federation::SchemaDecorator.decorate(self) if self.class.federation?
 
       # NB - don't call .query here of federation will break things
@@ -86,7 +90,7 @@ module GraphitiGraphQL
       schema.query # Actually fires the federation code
     end
 
-    def generate_schema_query(entrypoint_resources = nil)
+    def generate_schema_query(resources, entrypoints)
       existing_query = schema.instance_variable_get(:@query)
       existing_query ||= schema.send(:find_inherited_value, :query)
       # NB - don't call graphql_schema.query here of federation will break things
@@ -97,13 +101,11 @@ module GraphitiGraphQL
 
       # Ensure all types are generated, even if they aren't in a top-level Query
       # We might now want to expose the query, but do want to federate the Type
-      graphiti_schema.resources.each do |resource|
-        next if resource.remote?
+      get_schema_resources(resources).each do |resource|
         generate_type(resource)
       end
 
-      get_entrypoints(entrypoint_resources).each do |resource|
-        next if resource.remote?
+      get_schema_resources(entrypoints).each do |resource|
         add_index(query_class, resource)
         add_show(query_class, resource)
       end
@@ -203,14 +205,14 @@ module GraphitiGraphQL
         top_level_single: true
     end
 
-    def get_entrypoints(manually_specified)
+    def get_schema_resources(manually_specified)
       resources = graphiti_schema.resources
       if manually_specified
         resources = resources.select { |r|
           manually_specified.map(&:name).include?(r.name)
         }
       end
-      resources
+      resources.reject(&:remote?)
     end
 
     def generate_sort_att_type_for(resource)

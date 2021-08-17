@@ -53,8 +53,11 @@ module GraphitiGraphQL
       @generated ||= GraphitiGraphQL::Schema.generate
     end
 
-    def generate!(entrypoint_resources = nil)
-      @generated = GraphitiGraphQL::Schema.generate(entrypoint_resources)
+    # resources: All resources to put in the schema. Mostly just for testing.
+    # entrypoints: All resources to expose as top-level query objects
+    def generate!(resources: nil, entrypoints: nil)
+      @generated = GraphitiGraphQL::Schema
+        .generate(resources: resources, entrypoints: entrypoints)
     end
 
     def generated?

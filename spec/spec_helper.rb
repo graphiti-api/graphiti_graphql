@@ -20,19 +20,19 @@ def run(query, variables = {})
   raw.key?(:data) ? raw[:data] : raw
 end
 
-def schema!(entrypoints = nil)
+def schema!(resources = nil)
   if ENV["TEST"] == "true"
-    resources ||= Graphiti.resources.reject(&:abstract_class?)
-    resources.reject! { |r| r.name.nil? }
+    _resources ||= Graphiti.resources.reject(&:abstract_class?)
+    _resources.reject! { |r| r.name.nil? }
     collected = []
-    resources.reverse_each do |resource|
+    _resources.reverse_each do |resource|
       already_collected = collected.find { |c| c.name == resource.name }
       collected << resource unless already_collected
     end
-    resources = collected
-    Graphiti.instance_variable_set(:@resources, resources)
+    _resources = collected
+    Graphiti.instance_variable_set(:@resources, _resources)
   end
-  GraphitiGraphQL.schemas.generate!(entrypoints)
+  GraphitiGraphQL.schemas.generate!(resources: resources)
 end
 
 def schema_type(name)

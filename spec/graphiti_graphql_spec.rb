@@ -1669,7 +1669,7 @@ RSpec.describe GraphitiGraphQL do
       context "via variables" do
         it "works" do
           json = run(%|
-            query getEmployees($page: Page) {
+            query getEmployees($page: PageInput) {
               employees(page: $page) {
                 nodes {
                   firstName
@@ -1868,7 +1868,7 @@ RSpec.describe GraphitiGraphQL do
           params = yield cursor
 
           json = run(%(
-            query Cursor($page: Page, $after: String, $before: String, $first: Int) {
+            query Cursor($page: PageInput, $after: String, $before: String, $first: Int) {
               employees(page: $page, after: $after, before: $before, first: $first) {
                 nodes {
                   id
@@ -2174,7 +2174,7 @@ RSpec.describe GraphitiGraphQL do
           context "via variables" do
             it "works" do
               json = run(%|
-                query getEmployees($page: Page) {
+                query getEmployees($page: PageInput) {
                   employees(page: { size: 1 }) {
                     nodes {
                       positions(page: $page) {
@@ -2219,7 +2219,7 @@ RSpec.describe GraphitiGraphQL do
                   cursor = json[:employees][:nodes][0][:positions][:nodes][0][:_cursor]
 
                   json = run(%|
-                    query getEmployees($page: Page) {
+                    query getEmployees($page: PageInput) {
                       employees(page: { size: 1 }) {
                         nodes {
                           positions(page: $page) {
@@ -2297,7 +2297,7 @@ RSpec.describe GraphitiGraphQL do
           it "throws error as normal" do
             running = lambda do
               run(%|
-                query getEmployees($page: Page) {
+                query getEmployees($page: PageInput) {
                   employees(page: { size: 2 }) {
                     nodes {
                       positions(page: $page) {
