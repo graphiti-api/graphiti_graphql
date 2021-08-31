@@ -725,7 +725,7 @@ RSpec.describe GraphitiGraphQL do
       context "via variables" do
         it "works" do
           json = run(%|
-            query getEmployees($name: String) {
+            query getEmployees($name: [String!]) {
               employees(filter: { firstName: { eq: $name } }) {
                 nodes {
                   id
@@ -733,7 +733,7 @@ RSpec.describe GraphitiGraphQL do
                 }
               }
             }
-          |, {"name" => "Agatha"})
+          |, {"name" => ["Agatha"]})
           expect(json[:employees]).to eq({
             nodes: [{
               id: employee2.id.to_s,
@@ -1085,7 +1085,7 @@ RSpec.describe GraphitiGraphQL do
         context "via variables" do
           it "works" do
             json = run(%|
-              query getEmployees($name: String, $active: Boolean) {
+              query getEmployees($name: [String!], $active: Boolean) {
                 employees(filter: { firstName: { eq: $name } }) {
                   nodes {
                     id
@@ -1098,7 +1098,7 @@ RSpec.describe GraphitiGraphQL do
                   }
                 }
               }
-            |, {"name" => "Agatha", "active" => true})
+            |, {"name" => ["Agatha"], "active" => true})
             expect(json[:employees]).to eq({
               nodes: [{
                 id: employee2.id.to_s,
@@ -1142,7 +1142,7 @@ RSpec.describe GraphitiGraphQL do
 
           it "works" do
             json = run(%|
-              query getEmployees($name: String, $teamName: String) {
+              query getEmployees($name: [String!], $teamName: [String!]) {
                 employees(filter: { firstName: { eq: $name } }) {
                   nodes {
                     id
@@ -1163,7 +1163,7 @@ RSpec.describe GraphitiGraphQL do
                   }
                 }
               }
-            |, {"name" => "Agatha", "teamName" => "Team 3"})
+            |, {"name" => ["Agatha"], "teamName" => ["Team 3"]})
             expect(json).to eq({
               employees: {
                 nodes: [{

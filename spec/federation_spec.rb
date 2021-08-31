@@ -72,6 +72,21 @@ RSpec.describe GraphitiGraphQL::Federation do
       ])
     end
 
+    context "when passed magic: false" do
+      before do
+        resource.federated_type("OtherPosition").has_many :employees, magic: false
+        schema!([resource])
+      end
+
+      it "does not define a corresponding attribute" do
+        expect(resource.attributes.keys).to_not include(:other_position_id)
+      end
+
+      it "does not define a corresponding filter" do
+        expect(resource.filters.keys).to_not include(:other_position_id)
+      end
+    end
+
     context "when a corresponding readable attribute is already defined" do
       before do
         resource.attribute :other_position_id, :integer
