@@ -7,11 +7,18 @@ module GraphitiGraphQL
           @type_name = type_name
         end
 
-        def has_many(relationship_name, foreign_key: nil, magic: true, &blk)
+        def has_many(
+          relationship_name,
+          foreign_key: nil,
+          field: true,
+          filter: true,
+          &blk
+        )
           @caller.federated_has_many relationship_name,
             type: @type_name,
             foreign_key: foreign_key,
-            magic: magic,
+            field: field,
+            filter: filter,
             &blk
         end
       end
@@ -34,13 +41,13 @@ module GraphitiGraphQL
         #
         # * Add to the list of external graphql-ruby types we need in schema
         # * Add a readable and filterable FK, without clobbering pre-existing
-        def federated_has_many(name, type:, magic: true, foreign_key: nil, &blk)
+        def federated_has_many(name, type:, filter: true, field: true, foreign_key: nil, &blk)
           foreign_key ||= :"#{type.underscore}_id"
           resource = FederatedResource.new(type)
           federated_resources << resource
           resource.add_relationship(:has_many, name, self, foreign_key, &blk)
 
-          return unless magic
+          return unless (filter || field)
 
           attribute = attributes.find { |name, config|
             name.to_sym == foreign_key &&
@@ -49,20 +56,31 @@ module GraphitiGraphQL
           }
           has_filter = filters.key?(foreign_key)
           if !attribute && !has_filter
-            attribute foreign_key, :integer,
-              only: [:readable, :filterable],
-              schema: false,
-              readable: :gql?,
-              filterable: :gql?
-          elsif has_filter && !attribute
+            if field
+              opts = {
+                only: [:readable],
+                schema: false,
+                readable: :gql?
+              }
+              if filter
+                opts[:only] << :filterable
+                opts[:filterable] = :gql?
+              end
+              attribute foreign_key, :integer, opts
+            elsif filter
+              filter foreign_key, :integer, schema: false
+              attributes[foreign_key][:filterable] = :gql?
+            end
+          elsif has_filter && !attribute && field
             prior = filters[foreign_key]
             attribute foreign_key, prior[:type],
               only: [:readable, :filterable],
               schema: false,
               readable: :gql?
             filters[foreign_key] = prior
-          elsif attribute && !has_filter
-            filter foreign_key, attribute[:type]
+          elsif attribute && !has_filter && filter
+            filter foreign_key, attribute[:type], schema: false
+            attributes[foreign_key][:filterable] = :gql?
           end
         end
 

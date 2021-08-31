@@ -72,18 +72,36 @@ RSpec.describe GraphitiGraphQL::Federation do
       ])
     end
 
-    context "when passed magic: false" do
+    context "when passed field: false" do
       before do
-        resource.federated_type("OtherPosition").has_many :employees, magic: false
+        resource.federated_type("OtherPosition").has_many :employees, field: false
         schema!([resource])
       end
 
-      it "does not define a corresponding attribute" do
-        expect(resource.attributes.keys).to_not include(:other_position_id)
+      it "does not define a readable field" do
+        expect(resource.attributes[:other_position_id][:readable])
+          .to eq(false)
       end
 
-      it "does not define a corresponding filter" do
+      it "does define a guarded filter" do
+        expect(resource.attributes[:other_position_id][:filterable])
+          .to eq(:gql?)
+      end
+    end
+
+    context "when passed filter: false" do
+      before do
+        resource.federated_type("OtherPosition").has_many :employees, filter: false
+        schema!([resource])
+      end
+
+      it "does not add a filter" do
         expect(resource.filters.keys).to_not include(:other_position_id)
+      end
+
+      it "does define a guarded readable field" do
+        expect(resource.attributes[:other_position_id][:readable])
+          .to eq(:gql?)
       end
     end
 
