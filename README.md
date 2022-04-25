@@ -50,6 +50,8 @@ And then in `config/application.rb`:
 # require "sprockets/railtie"
 ```
 
+Alternatively, follow [this comment](https://github.com/rmosolgo/graphiql-rails/issues/53#issuecomment-877819958).
+
 ## Usage
 
 #### Blending with graphql-ruby
