@@ -204,7 +204,8 @@ module PORO
       :foo_positions,
       :notes,
       :other_position_id,
-      :other_pos_id
+      :other_pos_id,
+      :multi_word_stat
 
     def initialize(*)
       super
@@ -348,7 +349,7 @@ module PORO
 
     def sum(scope, attr)
       records = DB.all(scope.except(:page, :per))
-      records.map { |r| r.send(attr) }.sum
+      records.map { |r| r.send(attr) || 0 }.sum
     end
 
     def average(scope, attr)

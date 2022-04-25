@@ -332,7 +332,7 @@ module GraphitiGraphQL
       if stats
         stat_param = {}
         stats.children.each do |stat_node|
-          stat_name = stat_node.name
+          stat_name = stat_node.name.underscore
           calculations = stat_node.children.map(&:name)
           stat_param[stat_name.to_sym] = calculations.join(",")
         end

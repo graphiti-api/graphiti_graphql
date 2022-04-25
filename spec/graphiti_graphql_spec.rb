@@ -3573,6 +3573,36 @@ RSpec.describe GraphitiGraphQL do
           end
         end
 
+        describe "when multi-word attribute" do
+          before do
+            resource.stat multi_word_stat: [:sum]
+            schema!([resource])
+          end
+
+          it "works" do
+            json = run(%(
+              query {
+                employees {
+                  stats {
+                    multiWordStat {
+                      sum
+                    }
+                  }
+                }
+              }
+            ))
+            expect(json).to eq({
+              employees: {
+                stats: {
+                  multiWordStat: {
+                    sum: 0
+                  }
+                }
+              }
+            })
+          end
+        end
+
         describe "when multiple stats and calculations requested" do
           before do
             resource.stat age: [:sum, :average]
