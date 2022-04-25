@@ -21,7 +21,8 @@ module GraphitiGraphQL
       case Rails::VERSION::MAJOR
       when 4 then ActionDispatch::Reloader
       when 5 then ActiveSupport::Reloader
-      when 6 then ::Rails.application.reloader
+      else
+        ::Rails.application.reloader
       end
     end
 
@@ -64,15 +65,16 @@ module GraphitiGraphQL
     end
 
     initializer "graphiti_graphql.define_controller" do
-        app_controller = GraphitiGraphQL.config.federation_application_controller || ::ApplicationController
-        # rubocop:disable Lint/ConstantDefinitionInBlock(Standard)
-        class GraphitiGraphQL::ExecutionController < app_controller
-          register_exception Graphiti::Errors::UnreadableAttribute, message: true
-          def execute
-            params = request.params # avoid strong_parameters
-            render json: Graphiti.gql(params[:query], params[:variables])
-          end
+      require "#{Rails.root}/app/controllers/application_controller"
+      app_controller = GraphitiGraphQL.config.federation_application_controller || ::ApplicationController
+      # rubocop:disable Lint/ConstantDefinitionInBlock(Standard)
+      class GraphitiGraphQL::ExecutionController < app_controller
+        register_exception Graphiti::Errors::UnreadableAttribute, message: true
+        def execute
+          params = request.params # avoid strong_parameters
+          render json: Graphiti.gql(params[:query], params[:variables])
         end
+      end
     end
 
     initializer "graphiti_graphql.federation" do
