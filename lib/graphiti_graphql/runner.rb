@@ -326,8 +326,8 @@ module GraphitiGraphQL
     end
 
     def gather_stats(params, selection, variable_hash, chained_name = nil)
-      stats = selection.children.find { |c| c.name == "stats" }
-      nodes = selection.children.find { |c| c.name == "nodes" }
+      stats = selection.children.find { |c| c.respond_to?(:name) && c.name == "stats" }
+      nodes = selection.children.find { |c| c.respond_to?(:name) && c.name == "nodes" }
 
       if stats
         stat_param = {}
