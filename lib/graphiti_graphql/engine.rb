@@ -65,15 +65,18 @@ module GraphitiGraphQL
     end
 
     initializer "graphiti_graphql.define_controller" do
-      require "#{Rails.root}/app/controllers/application_controller"
-      app_controller = GraphitiGraphQL.config.federation_application_controller || ::ApplicationController
-      # rubocop:disable Lint/ConstantDefinitionInBlock(Standard)
-      class GraphitiGraphQL::ExecutionController < app_controller
-        register_exception Graphiti::Errors::UnreadableAttribute, message: true
-        def execute
-          params = request.params # avoid strong_parameters
-          render json: Graphiti.gql(params[:query], params[:variables])
+      ::GraphitiGraphQL::Engine.reloader_class.to_prepare do
+        require "#{Rails.root}/app/controllers/application_controller"
+        app_controller = GraphitiGraphQL.config.federation_application_controller || ::ApplicationController
+        # rubocop:disable Lint/ConstantDefinitionInBlock(Standard)
+        class GraphitiGraphQL::ExecutionController < app_controller
+          register_exception Graphiti::Errors::UnreadableAttribute, message: true
+          def execute
+            params = request.params # avoid strong_parameters
+            render json: Graphiti.gql(params[:query], params[:variables])
+          end
         end
+        # rubocop:enable Lint/ConstantDefinitionInBlock(Standard)
       end
     end
 
